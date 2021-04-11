@@ -238,14 +238,17 @@ function graph.draw(_graph, _, cr, width, height)
             for i = 0, #values - 1 do
                 local value = values[i + 1]
                 if value >= 0 then
-                    local x = i*step_width + ((i-1)*step_spacing) + 0.5
+                    -- Coordinate of the i-th bar's left edge + line antialiasing
+                    local x = i*(step_width + step_spacing) + 0.5
                     value = (value - min_value) / max_value
                     cr:move_to(x, height * (1 - value))
 
                     if step_shape then
-                        cr:translate(step_width + (i>1 and step_spacing or 0), height * (1 - value))
+                        -- Shift down to the value beginning
+                        cr:translate(0, height * (1 - value))
                         step_shape(cr, step_width, height)
-                        cr:translate(0, -(height * (1 - value)))
+                        -- Undo value shift and shift right to the next bar
+                        cr:translate(step_width + step_spacing, -(height * (1 - value)))
                     elseif step_width > 1 then
                         cr:rectangle(x, height * (1 - value), step_width, height)
                     else
