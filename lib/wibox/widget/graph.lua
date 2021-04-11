@@ -250,20 +250,23 @@ function graph.draw(_graph, _, cr, width, height)
                     -- Scale the value so that [min_value..max_value] maps to [0..1]
                     value = (value - min_value) / (max_value - min_value)
 
+                    -- Drawing bars up from the lower edge of the widget
+                    local value_y = height * (1 - value)
+
                     if step_shape then
                         -- Shift down to the value beginning
-                        cr:translate(0, height * (1 - value))
+                        cr:translate(0, value_y)
                         step_shape(cr, step_width, height)
                         -- Undo value shift and shift right to the next bar
-                        cr:translate(step_width + step_spacing, -(height * (1 - value)))
+                        cr:translate(step_width + step_spacing, -value_y)
                     else
                         -- Coordinate of the i-th bar's left edge
                         local x = i*(step_width + step_spacing)
                         if draw_with_lines then
-                            cr:move_to(x + 0.5, height * (1 - value))
+                            cr:move_to(x + 0.5, value_y)
                             cr:line_to(x + 0.5, height)
                         else
-                            cr:rectangle(x, height * (1 - value), step_width, height)
+                            cr:rectangle(x, value_y, step_width, height)
                         end
                     end
                 elseif step_shape then
