@@ -169,7 +169,8 @@ function graph.draw(_graph, _, cr, width, height)
     local step_width = _graph._private.step_width or 1
     local bw = _graph._private.border_width or 1
 
-    cr:set_line_width(bw)
+    -- Set thin line width for drawing graph bars with lines
+    cr:set_line_width(1)
 
     -- Draw the background first
     cr:set_source(color(_graph._private.background_color or beautiful.graph_bg or "#000000aa"))
@@ -270,6 +271,8 @@ function graph.draw(_graph, _, cr, width, height)
     if _graph._private.border_color then
         -- We decremented these by two above
         width, height = width + 2*bw, height + 2*bw
+
+        cr:set_line_width(bw)
 
         -- Draw the border
         cr:rectangle(bw/2, bw/2, width - bw, height - bw)
