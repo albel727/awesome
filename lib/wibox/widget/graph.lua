@@ -231,6 +231,11 @@ function graph.draw(_graph, _, cr, width, height)
                     min_value = v
                 end
             end
+            if min_value == max_value then
+                -- If all values are equal in an autoscaled graph,
+                -- simply draw them in the middle
+                min_value, max_value = min_value - 1, max_value + 1
+            end
         end
 
         -- Draw the background on no value
@@ -238,7 +243,8 @@ function graph.draw(_graph, _, cr, width, height)
             for i = 0, #values - 1 do
                 local value = values[i + 1]
                 if value >= 0 then
-                    value = (value - min_value) / max_value
+                    -- Scale the value so that [min_value..max_value] maps to [0..1]
+                    value = (value - min_value) / (max_value - min_value)
 
                     if step_shape then
                         -- Shift down to the value beginning
