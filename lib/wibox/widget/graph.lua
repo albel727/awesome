@@ -169,8 +169,12 @@ function graph.draw(_graph, _, cr, width, height)
     local step_width = _graph._private.step_width or 1
     local bw = _graph._private.border_width or 1
 
-    -- Set thin line width for drawing graph bars with lines
-    cr:set_line_width(1)
+    local draw_with_lines = not step_shape and step_width == 1
+
+    if draw_with_lines then
+        -- Set thin line width for drawing graph bars with lines
+        cr:set_line_width(1)
+    end
 
     -- Draw the background first
     cr:set_source(color(_graph._private.background_color or beautiful.graph_bg or "#000000aa"))
@@ -255,11 +259,11 @@ function graph.draw(_graph, _, cr, width, height)
                     else
                         -- Coordinate of the i-th bar's left edge
                         local x = i*(step_width + step_spacing)
-                        if step_width > 1 then
-                            cr:rectangle(x, height * (1 - value), step_width, height)
-                        else
+                        if draw_with_lines then
                             cr:move_to(x + 0.5, height * (1 - value))
                             cr:line_to(x + 0.5, height)
+                        else
+                            cr:rectangle(x, height * (1 - value), step_width, height)
                         end
                     end
                 elseif step_shape then
@@ -269,10 +273,10 @@ function graph.draw(_graph, _, cr, width, height)
             end
             cr:set_source(color(_graph._private.color or beautiful.graph_fg or "#ff0000"))
 
-            if step_shape or step_width > 1 then
-                cr:fill()
-            else
+            if draw_with_lines then
                 cr:stroke()
+            else
+                cr:fill()
             end
         end
 
