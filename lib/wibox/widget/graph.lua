@@ -262,6 +262,9 @@ function graph.draw(_graph, _, cr, width, height)
                             cr:line_to(x, height)
                         end
                     end
+                elseif step_shape then
+                    -- if the value is not drawn, don't forget to shift right anyway
+                    cr:translate(step_width + step_spacing, 0)
                 end
             end
             cr:set_source(color(_graph._private.color or beautiful.graph_fg or "#ff0000"))
