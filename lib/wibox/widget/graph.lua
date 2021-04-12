@@ -195,14 +195,18 @@ function graph.draw(_graph, _, cr, width, height)
     if _graph._private.stack then
 
         if _graph._private.scale then
+            local acc = {}
             for _, v in ipairs(values) do
-                for _, sv in ipairs(v) do
-                    if sv > max_value then
-                        max_value = sv
-                    end
-                    if min_value > sv then
-                        min_value = sv
-                    end
+                for idx, sv in ipairs(v) do
+                    acc[idx] = (acc[idx] or 0) + sv
+                end
+            end
+            for _, av in ipairs(acc) do
+                if av > max_value then
+                    max_value = av
+                end
+                if min_value > av then
+                    min_value = av
                 end
             end
         end
