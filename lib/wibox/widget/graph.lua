@@ -202,18 +202,22 @@ function graph:draw(_, cr, width, height)
         for color_idx, stack_values in ipairs(values) do
             local drawn_row = {}
             drawn_values[color_idx] = drawn_row
-            for idx, value in ipairs(stack_values) do
-                -- drawn_values will have NaN values in it due to negatives/NaNs in input.
-                -- we can't simply treat them like zeros during rendering,
-                -- in case step_shape() draws visible shapes for actual zero values too.
-                local acc = summed_values[idx] or 0
-                if value >= 0 then
-                    acc = acc + value
-                    drawn_row[idx] = acc
-                else
-                    drawn_row[idx] = nan
+
+            -- Don't draw series altogether if there's no color for them
+            if stack_colors[color_idx] then
+                for idx, value in ipairs(stack_values) do
+                    -- drawn_values will have NaN values in it due to negatives/NaNs in input.
+                    -- we can't simply treat them like zeros during rendering,
+                    -- in case step_shape() draws visible shapes for actual zero values too.
+                    local acc = summed_values[idx] or 0
+                    if value >= 0 then
+                        acc = acc + value
+                        drawn_row[idx] = acc
+                    else
+                        drawn_row[idx] = nan
+                    end
+                    summed_values[idx] = acc
                 end
-                summed_values[idx] = acc
             end
         end
 
@@ -222,7 +226,7 @@ function graph:draw(_, cr, width, height)
         -- that draws only the default value group #1
         summed_values = values[1] or {}
         drawn_values = { values[1] }
-        stack_colors = {}
+        stack_colors = { self._private.color or beautiful.graph_fg or "#ff0000" }
     end
 
     -- Do we have anything to draw?
@@ -248,51 +252,54 @@ function graph:draw(_, cr, width, height)
         local prev_y = self._private.stack and {}
 
         for color_idx, group_values in ipairs(drawn_values) do
-            local clr = stack_colors[color_idx] or self._private.color or beautiful.graph_fg or "#ff0000"
+            local clr = stack_colors[color_idx]
 
-            for i = 0, #group_values - 1 do
-                local value = group_values[i + 1]
-                if value >= 0 then
-                    -- Scale the value so that [min_value..max_value] maps to [0..1]
-                    value = (value - min_value) / (max_value - min_value)
+            -- Don't draw series altogether if there's no color for them.
+            if clr then
+                for i = 0, #group_values - 1 do
+                    local value = group_values[i + 1]
+                    if value >= 0 then
+                        -- Scale the value so that [min_value..max_value] maps to [0..1]
+                        value = (value - min_value) / (max_value - min_value)
 
-                    -- The coordinate of the i-th bar's left edge
-                    local x = i*(step_width + step_spacing)
+                        -- The coordinate of the i-th bar's left edge
+                        local x = i*(step_width + step_spacing)
 
-                    -- Drawing bars up from the lower edge of the widget
-                    local value_y = height * (1 - value)
-                    local base_y = baseline_y
-                    if prev_y then
-                        -- Draw from where the previous stacked series left off
-                        base_y = prev_y[i] or base_y
-                        -- Save our y for the next stacked series
-                        prev_y[i] = value_y
-                    end
-
-                    if step_shape then
-                        -- Shift to the bar beginning
-                        cr:translate(x, value_y)
-                        step_shape(cr, step_width, base_y - value_y)
-                        -- Undo the shift
-                        cr:set_matrix(pristine_transform)
-                    else
-                        if draw_with_lines then
-                            cr:move_to(x + 0.5, value_y)
-                            cr:line_to(x + 0.5, base_y)
-                        else
-                            cr:rectangle(x, value_y, step_width, base_y - value_y)
+                        -- Drawing bars up from the lower edge of the widget
+                        local value_y = height * (1 - value)
+                        local base_y = baseline_y
+                        if prev_y then
+                            -- Draw from where the previous stacked series left off
+                            base_y = prev_y[i] or base_y
+                            -- Save our y for the next stacked series
+                            prev_y[i] = value_y
                         end
+
+                        if step_shape then
+                            -- Shift to the bar beginning
+                            cr:translate(x, value_y)
+                            step_shape(cr, step_width, base_y - value_y)
+                            -- Undo the shift
+                            cr:set_matrix(pristine_transform)
+                        else
+                            if draw_with_lines then
+                                cr:move_to(x + 0.5, value_y)
+                                cr:line_to(x + 0.5, base_y)
+                            else
+                                cr:rectangle(x, value_y, step_width, base_y - value_y)
+                            end
+                        end
+
                     end
-
                 end
-            end
 
-            cr:set_source(color(clr))
+                cr:set_source(color(clr))
 
-            if draw_with_lines then
-                cr:stroke()
-            else
-                cr:fill()
+                if draw_with_lines then
+                    cr:stroke()
+                else
+                    cr:fill()
+                end
             end
         end
 
