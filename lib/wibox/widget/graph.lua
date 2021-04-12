@@ -38,8 +38,6 @@ local graph = { mt = {} }
 
 --- Set the graph border color.
 --
--- If the value is nil, no border will be drawn.
---
 --@DOC_wibox_widget_graph_border_color_EXAMPLE@
 --
 -- @property border_color
@@ -161,7 +159,7 @@ function graph:draw(_, cr, width, height)
     local step_shape = self._private.step_shape
     local step_spacing = self._private.step_spacing or 0
     local step_width = self._private.step_width or 1
-    local bw = self._private.border_width or 1
+    local border_width = self._private.border_width or 0
 
     local draw_with_lines = not step_shape and step_width == 1
 
@@ -174,12 +172,12 @@ function graph:draw(_, cr, width, height)
     cr:set_source(color(self._private.background_color or beautiful.graph_bg or "#000000aa"))
     cr:paint()
 
-    -- Account for the border width
     cr:save()
 
-    if self._private.border_color then
-        cr:translate(bw, bw)
-        width, height = width - 2*bw, height - 2*bw
+    -- Account for the border width
+    if border_width > 0 then
+        cr:translate(border_width, border_width)
+        width, height = width - 2*border_width, height - 2*border_width
     end
 
     -- Preserve the transform centered at the top-left corner of the graph
@@ -326,14 +324,14 @@ function graph:draw(_, cr, width, height)
     cr:restore()
 
     -- Draw the border last so that it overlaps already drawn values
-    if self._private.border_color then
+    if border_width > 0 then
         -- We decremented these by two above
-        width, height = width + 2*bw, height + 2*bw
+        width, height = width + 2*border_width, height + 2*border_width
 
-        cr:set_line_width(bw)
+        cr:set_line_width(border_width)
 
         -- Draw the border
-        cr:rectangle(bw/2, bw/2, width - bw, height - bw)
+        cr:rectangle(border_width/2, border_width/2, width - border_width, height - border_width)
         cr:set_source(color(self._private.border_color or beautiful.graph_border_color or "#ffffff"))
         cr:stroke()
     end
@@ -352,6 +350,13 @@ function graph:add_value(value, group)
     value = value or 0
     group = group or 1
 
+    local border_width = (self._private.border_width or 0) * 2
+    if self._private.width <= border_width then
+        -- We're too small to display anything.
+        -- Avoid spinning forever in the while loop below.
+        return self
+    end
+
     local max_value = self._private.max_value
     value = math.max(0, value)
     if not self._private.scale then
@@ -365,9 +370,6 @@ function graph:add_value(value, group)
     values = values[group]
 
     table.insert(values, 1, value)
-
-    local border_width = 0
-    if self._private.border_color then border_width = self._private.border_width*2 end
 
     -- Ensure we never have more data than we can draw
     while #values > self._private.width - border_width do
