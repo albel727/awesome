@@ -247,6 +247,8 @@ function graph.draw(_graph, _, cr, width, height)
 
         -- Draw the background on no value
         if #values ~= 0 then
+            local baseline_y = height
+
             for i = 0, #values - 1 do
                 local value = values[i + 1]
                 if value >= 0 then
@@ -262,15 +264,15 @@ function graph.draw(_graph, _, cr, width, height)
                     if step_shape then
                         -- Shift to the bar beginning
                         cr:translate(x, value_y)
-                        step_shape(cr, step_width, height)
+                        step_shape(cr, step_width, baseline_y - value_y)
                         -- Undo the shift
                         cr:set_matrix(pristine_transform)
                     else
                         if draw_with_lines then
                             cr:move_to(x + 0.5, value_y)
-                            cr:line_to(x + 0.5, height)
+                            cr:line_to(x + 0.5, baseline_y)
                         else
-                            cr:rectangle(x, value_y, step_width, height)
+                            cr:rectangle(x, value_y, step_width, baseline_y - value_y)
                         end
                     end
                 end
