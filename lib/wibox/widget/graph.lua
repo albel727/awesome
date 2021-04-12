@@ -83,8 +83,6 @@ local graph = { mt = {} }
 --
 -- @DOC_wibox_widget_graph_min_value_EXAMPLE@
 --
--- Note that the min_value is not supported when used along with the stack
--- property.
 -- @property min_value
 -- @tparam number min_value
 -- @propemits true false
@@ -99,8 +97,6 @@ local graph = { mt = {} }
 
 --- Set the width or the individual steps.
 --
--- Note that it isn't supported when used along with stacked graphs.
---
 --@DOC_wibox_widget_graph_step_EXAMPLE@
 --
 -- @property step_width
@@ -108,8 +104,6 @@ local graph = { mt = {} }
 -- @propemits true false
 
 --- Set the spacing between the steps.
---
--- Note that it isn't supported when used along with stacked graphs.
 --
 --@DOC_wibox_widget_graph_step_spacing_EXAMPLE@
 --
@@ -191,50 +185,51 @@ function graph:draw(_, cr, width, height)
     -- Preserve the transform centered at the top-left corner of the graph
     local pristine_transform = step_shape and cr:get_matrix()
 
-    -- Draw a stacked graph
+    -- summed_values[i] = sum [1,#values] of values[c][i]
+    local summed_values
+    -- drawn_values[c][i] = sum [1,c] of values[c][i]
+    local drawn_values
+    local stack_colors
+    local nan = 0/0
+
     if self._private.stack then
+        -- Prepare to draw a stacked graph
+        summed_values = {}
+        drawn_values = {}
+        stack_colors = self._private.stack_colors or {}
 
-        if self._private.scale then
-            local acc = {}
-            for _, v in ipairs(values) do
-                for idx, sv in ipairs(v) do
-                    acc[idx] = (acc[idx] or 0) + sv
+        -- Add stacked values up to get values we need to render
+        for color_idx, stack_values in ipairs(values) do
+            local drawn_row = {}
+            drawn_values[color_idx] = drawn_row
+            for idx, value in ipairs(stack_values) do
+                -- drawn_values will have NaN values in it due to negatives/NaNs in input.
+                -- we can't simply treat them like zeros during rendering,
+                -- in case step_shape() draws visible shapes for actual zero values too.
+                local acc = summed_values[idx] or 0
+                if value >= 0 then
+                    acc = acc + value
+                    drawn_row[idx] = acc
+                else
+                    drawn_row[idx] = nan
                 end
-            end
-            for _, av in ipairs(acc) do
-                if av > max_value then
-                    max_value = av
-                end
-                if min_value > av then
-                    min_value = av
-                end
-            end
-        end
-
-        for i = 0, width do
-            local rel_i = 0
-            local rel_x = i + 0.5
-
-            if self._private.stack_colors then
-                for idx, col in ipairs(self._private.stack_colors) do
-                    local stack_values = values[idx]
-                    if stack_values and i < #stack_values then
-                        local value = stack_values[i + 1] + rel_i
-                        cr:move_to(rel_x, height * (1 - (rel_i / max_value)))
-                        cr:line_to(rel_x, height * (1 - (value / max_value)))
-                        cr:set_source(color(col or beautiful.graph_fg or "#ff0000"))
-                        cr:stroke()
-                        rel_i = value
-                    end
-                end
+                summed_values[idx] = acc
             end
         end
+
     else
-        -- Non-stacked graph draws the default value group #1
-        values = values[1] or {}
+        -- A non-stacked graph is just like a stacked graph
+        -- that draws only the default value group #1
+        summed_values = values[1] or {}
+        drawn_values = { values[1] }
+        stack_colors = {}
+    end
+
+    -- Do we have anything to draw?
+    if #summed_values ~= 0 then
 
         if self._private.scale then
-            for _, v in ipairs(values) do
+            for _, v in ipairs(summed_values) do
                 if v > max_value then
                     max_value = v
                 end
@@ -249,12 +244,14 @@ function graph:draw(_, cr, width, height)
             end
         end
 
-        -- Draw the background on no value
-        if #values ~= 0 then
-            local baseline_y = height
+        local baseline_y = height
+        local prev_y = self._private.stack and {}
 
-            for i = 0, #values - 1 do
-                local value = values[i + 1]
+        for color_idx, group_values in ipairs(drawn_values) do
+            local clr = stack_colors[color_idx] or self._private.color or beautiful.graph_fg or "#ff0000"
+
+            for i = 0, #group_values - 1 do
+                local value = group_values[i + 1]
                 if value >= 0 then
                     -- Scale the value so that [min_value..max_value] maps to [0..1]
                     value = (value - min_value) / (max_value - min_value)
@@ -264,24 +261,33 @@ function graph:draw(_, cr, width, height)
 
                     -- Drawing bars up from the lower edge of the widget
                     local value_y = height * (1 - value)
+                    local base_y = baseline_y
+                    if prev_y then
+                        -- Draw from where the previous stacked series left off
+                        base_y = prev_y[i] or base_y
+                        -- Save our y for the next stacked series
+                        prev_y[i] = value_y
+                    end
 
                     if step_shape then
                         -- Shift to the bar beginning
                         cr:translate(x, value_y)
-                        step_shape(cr, step_width, baseline_y - value_y)
+                        step_shape(cr, step_width, base_y - value_y)
                         -- Undo the shift
                         cr:set_matrix(pristine_transform)
                     else
                         if draw_with_lines then
                             cr:move_to(x + 0.5, value_y)
-                            cr:line_to(x + 0.5, baseline_y)
+                            cr:line_to(x + 0.5, base_y)
                         else
-                            cr:rectangle(x, value_y, step_width, baseline_y - value_y)
+                            cr:rectangle(x, value_y, step_width, base_y - value_y)
                         end
                     end
+
                 end
             end
-            cr:set_source(color(self._private.color or beautiful.graph_fg or "#ff0000"))
+
+            cr:set_source(color(clr))
 
             if draw_with_lines then
                 cr:stroke()
