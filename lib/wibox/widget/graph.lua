@@ -371,8 +371,14 @@ function graph:add_value(value, group)
 
     table.insert(values, 1, value)
 
+    local step_width = self._private.step_width or 1
+    local step_spacing = self._private.step_spacing or 0
+    local max_values_num = math.ceil(
+        (self._private.width - border_width) / (step_width + step_spacing)
+    )
+
     -- Ensure we never have more data than we can draw
-    while #values > self._private.width - border_width do
+    while #values > max_values_num do
         table.remove(values)
     end
 
