@@ -21,7 +21,6 @@ local setmetatable = setmetatable
 local ipairs = ipairs
 local math = math
 local table = table
-local type = type
 local color = require("gears.color")
 local base = require("wibox.widget.base")
 local beautiful = require("beautiful")
@@ -219,6 +218,9 @@ function graph.draw(_graph, _, cr, width, height)
             end
         end
     else
+        -- Non-stacked graph draws the default value group #1
+        values = values[1] or {}
+
         if _graph._private.scale then
             for _, v in ipairs(values) do
                 if v > max_value then
@@ -288,21 +290,20 @@ end
 -- @tparam[opt] number group The stack color group index.
 function graph:add_value(value, group)
     value = value or 0
-    local values = self._private.values
+    group = group or 1
+
     local max_value = self._private.max_value
     value = math.max(0, value)
     if not self._private.scale then
         value = math.min(max_value, value)
     end
 
-    if self._private.stack and group then
-        if not  self._private.values[group]
-        or type(self._private.values[group]) ~= "table"
-        then
-            self._private.values[group] = {}
-        end
-        values = self._private.values[group]
+    local values = self._private.values
+    if not values[group] then
+        values[group] = {}
     end
+    values = values[group]
+
     table.insert(values, value)
 
     local border_width = 0
