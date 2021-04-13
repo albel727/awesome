@@ -151,7 +151,8 @@ local properties = { "width", "height", "border_color", "stack",
                      "step_spacing", "step_width", "border_width" }
 
 function graph:draw(_, cr, width, height)
-    local max_value = self._private.max_value
+    local max_value = self._private.max_value or (
+        self._private.scale and -math.huge or 1)
     local min_value = self._private.min_value or (
         self._private.scale and math.huge or 0)
     local values = self._private.values
@@ -357,7 +358,7 @@ function graph:add_value(value, group)
         return self
     end
 
-    local max_value = self._private.max_value
+    local max_value = self._private.max_value or 1
     value = math.max(0, value)
     if not self._private.scale then
         value = math.min(max_value, value)
