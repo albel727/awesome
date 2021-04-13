@@ -464,7 +464,6 @@ function graph.new(args)
     _graph._private.width     = width
     _graph._private.height    = height
     _graph._private.values    = {}
-    _graph._private.max_value = 1
 
     -- Set methods
     _graph.add_value = graph["add_value"]
