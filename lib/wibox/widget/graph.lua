@@ -207,7 +207,7 @@ function graph.draw(_graph, _, cr, width, height)
                 for idx, col in ipairs(_graph._private.stack_colors) do
                     local stack_values = values[idx]
                     if stack_values and i < #stack_values then
-                        local value = stack_values[#stack_values - i] + rel_i
+                        local value = stack_values[i + 1] + rel_i
                         cr:move_to(rel_x, height * (1 - (rel_i / max_value)))
                         cr:line_to(rel_x, height * (1 - (value / max_value)))
                         cr:set_source(color(col or beautiful.graph_fg or "#ff0000"))
@@ -234,9 +234,8 @@ function graph.draw(_graph, _, cr, width, height)
 
         -- Draw the background on no value
         if #values ~= 0 then
-            -- Draw reverse
             for i = 0, #values - 1 do
-                local value = values[#values - i]
+                local value = values[i + 1]
                 if value >= 0 then
                     local x = i*step_width + ((i-1)*step_spacing) + 0.5
                     value = (value - min_value) / max_value
@@ -304,14 +303,14 @@ function graph:add_value(value, group)
     end
     values = values[group]
 
-    table.insert(values, value)
+    table.insert(values, 1, value)
 
     local border_width = 0
     if self._private.border_color then border_width = self._private.border_width*2 end
 
     -- Ensure we never have more data than we can draw
     while #values > self._private.width - border_width do
-        table.remove(values, 1)
+        table.remove(values)
     end
 
     self:emit_signal("widget::redraw_needed")
