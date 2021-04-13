@@ -185,18 +185,30 @@ function graph:draw(_, cr, width, height)
     -- Preserve the transform centered at the top-left corner of the graph
     local pristine_transform = step_shape and cr:get_matrix()
 
-    -- summed_values[i] = sum [1,#values] of values[c][i]
-    local summed_values
-    -- drawn_values[c][i] = sum [1,c] of values[c][i]
+    local stack_colors = self._private.stack_colors
+    if not stack_colors then
+        -- If there are no individual colors for data series,
+        -- draw them all with the default color.
+        local clr = self._private.color or beautiful.graph_fg or "#ff0000"
+        stack_colors = {}
+        -- We're doing this instead of simply setting stack_colors to {},
+        -- because stack_colors[group] == nil means "don't draw this group"
+        for group = 1, #values do
+            stack_colors[group] = clr
+        end
+    end
+
+    local scaling_values
     local drawn_values
-    local stack_colors
     local nan = 0/0
 
     if self._private.stack then
         -- Prepare to draw a stacked graph
-        summed_values = {}
+
+        -- summed_values[i] = sum [1,#values] of values[c][i]
+        local summed_values = {}
+        -- drawn_values[c][i] = sum [1,c] of values[c][i]
         drawn_values = {}
-        stack_colors = self._private.stack_colors or {}
 
         -- Add stacked values up to get values we need to render
         for color_idx, stack_values in ipairs(values) do
@@ -221,24 +233,29 @@ function graph:draw(_, cr, width, height)
             end
         end
 
+        -- In a stacked graph it's sufficient to examine only the cumulative sum row
+        -- to determine the max_value, since all values are necessarily >= 0
+        -- and the min_value should be always at most 0
+        scaling_values = { {0}, summed_values }
     else
         -- A non-stacked graph is just like a stacked graph
-        -- that draws only the default value group #1
-        summed_values = values[1] or {}
-        drawn_values = { values[1] }
-        stack_colors = { self._private.color or beautiful.graph_fg or "#ff0000" }
+        drawn_values = values
+        -- But all values need to be examined to determine proper scaling
+        scaling_values = values
     end
 
     -- Do we have anything to draw?
-    if #summed_values ~= 0 then
+    if true then
 
         if self._private.scale then
-            for _, v in ipairs(summed_values) do
-                if v > max_value then
-                    max_value = v
-                end
-                if min_value > v then
-                    min_value = v
+            for _, group_values in ipairs(scaling_values) do
+                for _, v in ipairs(group_values) do
+                    if v > max_value then
+                        max_value = v
+                    end
+                    if min_value > v then
+                        min_value = v
+                    end
                 end
             end
             if min_value == max_value then
