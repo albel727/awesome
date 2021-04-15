@@ -166,15 +166,6 @@ function graph:draw(_, cr, width, height)
     local cairo_rectangle = cr.rectangle
     local cairo_translate = cr.translate
     local cairo_set_matrix = cr.set_matrix
-    local cairo_move_to = cr.move_to
-    local cairo_line_to = cr.line_to
-
-    local draw_with_lines = not step_shape and step_width == 1
-
-    if draw_with_lines then
-        -- Set thin line width for drawing graph bars with lines
-        cr:set_line_width(1)
-    end
 
     -- Draw the background first
     cr:set_source(color(self._private.background_color or beautiful.graph_bg or "#000000aa"))
@@ -305,24 +296,14 @@ function graph:draw(_, cr, width, height)
                             -- Undo the shift
                             cairo_set_matrix(cr, pristine_transform)
                         else
-                            if draw_with_lines then
-                                cairo_move_to(cr, x + 0.5, value_y)
-                                cairo_line_to(cr, x + 0.5, base_y)
-                            else
-                                cairo_rectangle(cr, x, value_y, step_width, base_y - value_y)
-                            end
+                            cairo_rectangle(cr, x, value_y, step_width, base_y - value_y)
                         end
-
                     end
                 end
 
                 cr:set_source(color(clr))
 
-                if draw_with_lines then
-                    cr:stroke()
-                else
-                    cr:fill()
-                end
+                cr:fill()
             end
         end
 
