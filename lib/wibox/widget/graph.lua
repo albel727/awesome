@@ -272,14 +272,14 @@ function graph:draw(_, cr, width, height)
 
             -- Don't draw series altogether if there's no color for them.
             if clr then
-                for i = 0, #group_values - 1 do
-                    local value = group_values[i + 1]
+                for i = 1, #group_values do
+                    local value = group_values[i]
                     if value >= 0 then
                         -- Scale the value so that [min_value..max_value] maps to [0..1]
                         value = (value - min_value) / (max_value - min_value)
 
                         -- The coordinate of the i-th bar's left edge
-                        local x = i*(step_width + step_spacing)
+                        local x = (i-1)*(step_width + step_spacing)
 
                         -- Drawing bars up from the lower edge of the widget
                         local value_y = height * (1 - value)
