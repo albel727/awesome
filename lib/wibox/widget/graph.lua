@@ -151,7 +151,7 @@ local properties = { "width", "height", "border_color", "stack",
                      "stack_colors", "color", "background_color",
                      "max_value", "scale", "min_value", "step_shape",
                      "step_spacing", "step_width", "border_width",
-                     "clamp_bars",
+                     "clamp_bars", "baseline_value", "baseline_y",
 }
 
 function graph:draw(_, cr, width, height)
@@ -269,7 +269,24 @@ function graph:draw(_, cr, width, height)
             end
         end
 
-        local baseline_y = height
+        -- The position of the baseline in widget coordinates
+        local baseline_y = self._private.baseline_y
+        if baseline_y then
+            -- It is specified by the user as [0..1], map it to [0..height]
+            baseline_y = baseline_y * height
+        else
+            -- The position of the baseline in value coordinates
+            -- It defaults to the usual zero axis
+            local baseline_value = self._private.baseline_value or 0
+            -- Let's map it into widget coordinates
+            baseline_value = (baseline_value - min_value) / (max_value - min_value)
+            if clamp_bars then
+                -- Don't allow it to exceed widget's dimensions
+                baseline_value = math_min(1, math_max(0, baseline_value))
+            end
+            baseline_y = height * (1 - baseline_value)
+        end
+
         local prev_y = self._private.stack and {}
 
         for color_idx, group_values in ipairs(drawn_values) do
