@@ -355,6 +355,17 @@ function graph.fit(_graph)
     return _graph._private.width, _graph._private.height
 end
 
+function graph:compute_drawn_values_num()
+    local border_width = self._private.border_width or 0
+    local usable_width = self._private.width - 2*border_width
+    if usable_width <= 0 then
+        return 0
+    end
+    local step_width = self._private.step_width or 1
+    local step_spacing = self._private.step_spacing or 0
+    return math.ceil(usable_width / (step_width + step_spacing))
+end
+
 --- Add a value to the graph
 --
 -- @method add_value
@@ -364,11 +375,12 @@ function graph:add_value(value, group)
     value = value or 0
     group = group or 1
 
-    local border_width = (self._private.border_width or 0) * 2
-    if self._private.width <= border_width then
-        -- We're too small to display anything.
-        -- Avoid spinning forever in the while loop below.
-        return self
+    local max_values_num = self:compute_drawn_values_num()
+    if not (max_values_num >= 0) then
+        -- Map negatives and NaNs to zero to
+        -- avoid spinning forever in the while loop below,
+        -- or letting values infinitely accumulate
+        max_values_num = 0
     end
 
     local values = self._private.values
@@ -378,12 +390,6 @@ function graph:add_value(value, group)
     values = values[group]
 
     table.insert(values, 1, value)
-
-    local step_width = self._private.step_width or 1
-    local step_spacing = self._private.step_spacing or 0
-    local max_values_num = math.ceil(
-        (self._private.width - border_width) / (step_width + step_spacing)
-    )
 
     -- Ensure we never have more data than we can draw
     while #values > max_values_num do
