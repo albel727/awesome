@@ -24,6 +24,7 @@ local math_max = math.max
 local math_min = math.min
 local table = table
 local color = require("gears.color")
+local gtable = require("gears.table")
 local base = require("wibox.widget.base")
 local beautiful = require("beautiful")
 
@@ -472,16 +473,11 @@ function graph.new(args)
     _graph._private.values    = {}
     _graph._private.clamp_bars = true
 
-    -- Set methods
-    _graph.add_value = graph["add_value"]
-    _graph.clear = graph["clear"]
-    _graph.draw = graph.draw
-    _graph.fit = graph.fit
-
-    for _, prop in ipairs(properties) do
-        _graph["set_" .. prop] = graph["set_" .. prop]
-        _graph["get_" .. prop] = graph["get_" .. prop]
-    end
+    -- Copy methods and properties over
+    gtable.crush(_graph, graph, true)
+    -- Except those, which don't belong in the widget instance
+    rawset(_graph, "new", nil)
+    rawset(_graph, "mt", nil)
 
     return _graph
 end
