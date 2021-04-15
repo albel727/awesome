@@ -20,6 +20,8 @@
 local setmetatable = setmetatable
 local ipairs = ipairs
 local math = math
+local math_max = math.max
+local math_min = math.min
 local table = table
 local color = require("gears.color")
 local base = require("wibox.widget.base")
@@ -148,7 +150,9 @@ local graph = { mt = {} }
 local properties = { "width", "height", "border_color", "stack",
                      "stack_colors", "color", "background_color",
                      "max_value", "scale", "min_value", "step_shape",
-                     "step_spacing", "step_width", "border_width" }
+                     "step_spacing", "step_width", "border_width",
+                     "clamp_bars",
+}
 
 function graph:draw(_, cr, width, height)
     local max_value = self._private.max_value or (
@@ -161,6 +165,7 @@ function graph:draw(_, cr, width, height)
     local step_spacing = self._private.step_spacing or 0
     local step_width = self._private.step_width or 1
     local border_width = self._private.border_width or 0
+    local clamp_bars = self._private.clamp_bars
 
     -- Cache methods used in the inner loop for a 3x performance boost
     local cairo_rectangle = cr.rectangle
@@ -247,6 +252,8 @@ function graph:draw(_, cr, width, height)
         if self._private.scale then
             for _, group_values in ipairs(scaling_values) do
                 for _, v in ipairs(group_values) do
+                    -- We don't use math.min/max here to be sure that
+                    -- min/max_value don't accidentally get assigned a NaN
                     if v > max_value then
                         max_value = v
                     end
@@ -272,9 +279,15 @@ function graph:draw(_, cr, width, height)
             if clr then
                 for i = 1, #group_values do
                     local value = group_values[i]
-                    if value >= 0 then
-                        -- Scale the value so that [min_value..max_value] maps to [0..1]
-                        value = (value - min_value) / (max_value - min_value)
+                    -- Scale the value so that [min_value..max_value] maps to [0..1]
+                    value = (value - min_value) / (max_value - min_value)
+
+                    -- Check whether value is NaN
+                    if value == value then
+                        if clamp_bars then
+                            -- Don't allow the bar to exceed widget's dimensions
+                            value = math_min(1, math_max(0, value))
+                        end
 
                         -- The coordinate of the i-th bar's left edge
                         local x = (i-1)*(step_width + step_spacing)
@@ -344,12 +357,6 @@ function graph:add_value(value, group)
         -- We're too small to display anything.
         -- Avoid spinning forever in the while loop below.
         return self
-    end
-
-    local max_value = self._private.max_value or 1
-    value = math.max(0, value)
-    if not self._private.scale then
-        value = math.min(max_value, value)
     end
 
     local values = self._private.values
@@ -452,6 +459,7 @@ function graph.new(args)
     _graph._private.width     = width
     _graph._private.height    = height
     _graph._private.values    = {}
+    _graph._private.clamp_bars = true
 
     -- Set methods
     _graph.add_value = graph["add_value"]
