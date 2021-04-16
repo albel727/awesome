@@ -398,7 +398,8 @@ end
 local function guess_capacity(self)
     local capacity = self._private.capacity
     if capacity then
-        return capacity
+        -- Ensure it's integer, no matter what the user sets.
+        return math.ceil(capacity)
     end
 
     local ldwn = self._private.last_drawn_values_num
@@ -423,26 +424,26 @@ function graph:add_value(value, group)
     value = value or 0
     group = group or 1
 
-    local max_values_num = guess_capacity(self)
-
-    if not (max_values_num >= 0) then
-        -- Map negatives and NaNs to zero to
-        -- avoid spinning forever in the while loop below,
-        -- or letting values infinitely accumulate
-        max_values_num = 0
-    end
-
     local values = self._private.values
     if not values[group] then
         values[group] = {}
     end
     values = values[group]
 
-    table.insert(values, 1, value)
+    local capacity = guess_capacity(self)
+    -- Map negatives, NaNs and zero to nil
+    capacity = (capacity >= 1) and capacity
 
     -- Remove old values over capacity
-    while #values > max_values_num do
-        table.remove(values)
+    -- Invalid capacity means "remove everything"
+    local i = capacity or 1
+    while values[i] do
+        values[i] = nil
+        i = i + 1
+    end
+
+    if capacity then
+        table.insert(values, 1, value)
     end
 
     self:emit_signal("widget::redraw_needed")
