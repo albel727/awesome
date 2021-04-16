@@ -253,94 +253,90 @@ function graph:draw_values(cr, _, height, drawn_values_num)
         scaling_values = values
     end
 
-    -- Do we have to draw anything?
-    if drawn_values_num > 0 then
+    if self._private.scale then
+        for _, group_values in ipairs(scaling_values) do
+            for idx, v in ipairs(group_values) do
+                -- Do not let off-screen values affect autoscaling
+                if idx > drawn_values_num then
+                    break
+                end
 
-        if self._private.scale then
-            for _, group_values in ipairs(scaling_values) do
-                for idx, v in ipairs(group_values) do
-                    -- Do not let off-screen values affect autoscaling
-                    if idx > drawn_values_num then
-                        break
+                -- We don't use math.min/max here to be sure that
+                -- min/max_value don't accidentally get assigned a NaN
+                if v > max_value then
+                    max_value = v
+                end
+                if min_value > v then
+                    min_value = v
+                end
+            end
+        end
+        if min_value == max_value then
+            -- If all values are equal in an autoscaled graph,
+            -- simply draw them in the middle
+            min_value, max_value = min_value - 1, max_value + 1
+        end
+    end
+
+    -- The position of the baseline in value coordinates
+    -- It defaults to the usual zero axis
+    local baseline_value = self._private.baseline_value or 0
+    -- Let's map it into widget coordinates
+    baseline_value = (baseline_value - min_value) / (max_value - min_value)
+    if clamp_bars then
+        -- Don't allow it to exceed widget's dimensions
+        baseline_value = math_min(1, math_max(0, baseline_value))
+    end
+    -- The position of the baseline in widget coordinates
+    local baseline_y = height * (1 - baseline_value)
+
+    local prev_y = self._private.stack and {}
+
+    for color_idx, group_values in ipairs(drawn_values) do
+        local clr = stack_colors[color_idx]
+
+        -- Don't draw series altogether if there's no color for them.
+        if clr then
+            for i = 1, math_min(#group_values, drawn_values_num) do
+                local value = group_values[i]
+                -- Scale the value so that [min_value..max_value] maps to [0..1]
+                value = (value - min_value) / (max_value - min_value)
+
+                -- Check whether value is NaN
+                if value == value then
+                    if clamp_bars then
+                        -- Don't allow the bar to exceed widget's dimensions
+                        value = math_min(1, math_max(0, value))
                     end
 
-                    -- We don't use math.min/max here to be sure that
-                    -- min/max_value don't accidentally get assigned a NaN
-                    if v > max_value then
-                        max_value = v
+                    -- The coordinate of the i-th bar's left edge
+                    local x = (i-1)*(step_width + step_spacing)
+
+                    -- Drawing bars up from the lower edge of the widget
+                    local value_y = height * (1 - value)
+                    local base_y = baseline_y
+                    if prev_y then
+                        -- Draw from where the previous stacked series left off
+                        base_y = prev_y[i] or base_y
+                        -- Save our y for the next stacked series
+                        prev_y[i] = value_y
                     end
-                    if min_value > v then
-                        min_value = v
+
+                    if step_shape then
+                        -- Shift to the bar beginning
+                        cairo_translate(cr, x, value_y)
+                        step_shape(cr, step_width, base_y - value_y)
+                        -- Undo the shift
+                        cairo_set_matrix(cr, pristine_transform)
+                    else
+                        cairo_rectangle(cr, x, value_y, step_width, base_y - value_y)
                     end
                 end
             end
-            if min_value == max_value then
-                -- If all values are equal in an autoscaled graph,
-                -- simply draw them in the middle
-                min_value, max_value = min_value - 1, max_value + 1
-            end
-        end
 
-        -- The position of the baseline in value coordinates
-        -- It defaults to the usual zero axis
-        local baseline_value = self._private.baseline_value or 0
-        -- Let's map it into widget coordinates
-        baseline_value = (baseline_value - min_value) / (max_value - min_value)
-        if clamp_bars then
-            -- Don't allow it to exceed widget's dimensions
-            baseline_value = math_min(1, math_max(0, baseline_value))
-        end
-        -- The position of the baseline in widget coordinates
-        local baseline_y = height * (1 - baseline_value)
+            cr:set_source(color(clr))
 
-        local prev_y = self._private.stack and {}
-
-        for color_idx, group_values in ipairs(drawn_values) do
-            local clr = stack_colors[color_idx]
-
-            -- Don't draw series altogether if there's no color for them.
-            if clr then
-                for i = 1, math_min(#group_values, drawn_values_num) do
-                    local value = group_values[i]
-                    -- Scale the value so that [min_value..max_value] maps to [0..1]
-                    value = (value - min_value) / (max_value - min_value)
-
-                    -- Check whether value is NaN
-                    if value == value then
-                        if clamp_bars then
-                            -- Don't allow the bar to exceed widget's dimensions
-                            value = math_min(1, math_max(0, value))
-                        end
-
-                        -- The coordinate of the i-th bar's left edge
-                        local x = (i-1)*(step_width + step_spacing)
-
-                        -- Drawing bars up from the lower edge of the widget
-                        local value_y = height * (1 - value)
-                        local base_y = baseline_y
-                        if prev_y then
-                            -- Draw from where the previous stacked series left off
-                            base_y = prev_y[i] or base_y
-                            -- Save our y for the next stacked series
-                            prev_y[i] = value_y
-                        end
-
-                        if step_shape then
-                            -- Shift to the bar beginning
-                            cairo_translate(cr, x, value_y)
-                            step_shape(cr, step_width, base_y - value_y)
-                            -- Undo the shift
-                            cairo_set_matrix(cr, pristine_transform)
-                        else
-                            cairo_rectangle(cr, x, value_y, step_width, base_y - value_y)
-                        end
-                    end
-                end
-
-                cr:set_source(color(clr))
-
-                cr:fill()
-            end
+            cr:fill()
         end
     end
 end
