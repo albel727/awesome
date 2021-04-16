@@ -156,6 +156,20 @@ local properties = { "width", "height", "border_color", "stack",
                      "capacity",
 }
 
+local function graph_gather_drawn_values_num_stats(self, new_value)
+    if not (new_value >= 0) then
+        return -- is negative or NaN
+    end
+
+    local last_value = self._private.last_drawn_values_num or 0
+    -- Grow instantly and shrink slow
+    if new_value < last_value then
+        self._private.last_drawn_values_num = last_value - 1
+    else
+        self._private.last_drawn_values_num = new_value
+    end
+end
+
 function graph:draw(_, cr, width, height)
     local max_value = self._private.max_value or (
         self._private.scale and -math.huge or 1)
@@ -168,7 +182,10 @@ function graph:draw(_, cr, width, height)
     local step_width = self._private.step_width or 1
     local border_width = self._private.border_width or 0
     local clamp_bars = self._private.clamp_bars
-    local drawn_values_num = self:compute_drawn_values_num(width)
+    local drawn_values_num = self:compute_drawn_values_num(width-2*border_width)
+
+    -- Track our usage to help us guess the necessary values array capacity
+    graph_gather_drawn_values_num_stats(self, drawn_values_num)
 
     -- Cache methods used in the inner loop for a 3x performance boost
     local cairo_rectangle = cr.rectangle
@@ -366,14 +383,7 @@ function graph.fit(_graph)
     return _graph._private.width, _graph._private.height
 end
 
-function graph:compute_drawn_values_num(widget_width)
-    -- graph:draw() could be called with a different width,
-    -- than is stored in _private, hence the need for
-    -- this function to be parametrized
-    widget_width = widget_width or self._private.width
-
-    local border_width = self._private.border_width or 0
-    local usable_width = widget_width - 2*border_width
+function graph:compute_drawn_values_num(usable_width)
     if usable_width <= 0 then
         return 0
     end
@@ -388,9 +398,17 @@ local function guess_capacity(self)
         return capacity
     end
 
+    local ldwn = self._private.last_drawn_values_num
+    if not ldwn then
+        -- We haven't been drawn even once yet,
+        -- maybe the user will push a ton of values now.
+        -- Our widget is 8K-display-ready.
+        return 8192
+    end
+
     -- Calculate an appropriate capacity from drawn values num
     -- with some wiggle room for widget resizes
-    return math.ceil(self:compute_drawn_values_num()/64 + 1)*64
+    return math.ceil(ldwn/64 + 1)*64
 end
 
 --- Add a value to the graph
