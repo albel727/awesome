@@ -170,7 +170,7 @@ local function graph_gather_drawn_values_num_stats(self, new_value)
     end
 end
 
-function graph:draw(_, cr, width, height)
+function graph:draw_values(cr, _, height, drawn_values_num)
     local max_value = self._private.max_value or (
         self._private.scale and -math.huge or 1)
     local min_value = self._private.min_value or (
@@ -180,29 +180,12 @@ function graph:draw(_, cr, width, height)
     local step_shape = self._private.step_shape
     local step_spacing = self._private.step_spacing or 0
     local step_width = self._private.step_width or 1
-    local border_width = self._private.border_width or 0
     local clamp_bars = self._private.clamp_bars
-    local drawn_values_num = self:compute_drawn_values_num(width-2*border_width)
-
-    -- Track our usage to help us guess the necessary values array capacity
-    graph_gather_drawn_values_num_stats(self, drawn_values_num)
 
     -- Cache methods used in the inner loop for a 3x performance boost
     local cairo_rectangle = cr.rectangle
     local cairo_translate = cr.translate
     local cairo_set_matrix = cr.set_matrix
-
-    -- Draw the background first
-    cr:set_source(color(self._private.background_color or beautiful.graph_bg or "#000000aa"))
-    cr:paint()
-
-    cr:save()
-
-    -- Account for the border width
-    if border_width > 0 then
-        cairo_translate(cr, border_width, border_width)
-        width, height = width - 2*border_width, height - 2*border_width
-    end
 
     -- Preserve the transform centered at the top-left corner of the graph
     local pristine_transform = step_shape and cr:get_matrix()
@@ -359,21 +342,42 @@ function graph:draw(_, cr, width, height)
                 cr:fill()
             end
         end
-
     end
+end
 
-    -- Undo the cr:translate() for the border and step shapes
-    cr:restore()
+function graph:draw(_, cr, width, height)
+    local border_width = self._private.border_width or 0
+    local drawn_values_num = self:compute_drawn_values_num(width-2*border_width)
+
+    -- Track our usage to help us guess the necessary values array capacity
+    graph_gather_drawn_values_num_stats(self, drawn_values_num)
+
+    -- Draw the background first
+    cr:set_source(color(self._private.background_color or beautiful.graph_bg or "#000000aa"))
+    cr:paint()
+
+    -- Draw the values
+    if drawn_values_num > 0 then
+        cr:save()
+
+        -- Account for the border width
+        if border_width > 0 then
+            cr:translate(border_width, border_width)
+        end
+
+        local values_width = width - 2*border_width
+        local values_height = height - 2*border_width
+
+        self:draw_values(cr, values_width, values_height, drawn_values_num)
+
+        -- Undo the cr:translate() for the border and step shapes
+        cr:restore()
+    end
 
     -- Draw the border last so that it overlaps already drawn values
     if border_width > 0 then
-        -- We decremented these by two above
-        width, height = width + 2*border_width, height + 2*border_width
-
         cr:set_line_width(border_width)
-
-        -- Draw the border
-        cairo_rectangle(cr, border_width/2, border_width/2, width - border_width, height - border_width)
+        cr:rectangle(border_width/2, border_width/2, width - border_width, height - border_width)
         cr:set_source(color(self._private.border_color or beautiful.graph_border_color or "#ffffff"))
         cr:stroke()
     end
