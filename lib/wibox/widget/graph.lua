@@ -297,6 +297,10 @@ function graph:draw_values(cr, _, height, drawn_values_num)
 
         -- Don't draw series altogether if there's no color for them.
         if clr then
+            -- Set the data series' color early, in case the user
+            -- wants to do their own painting inside step_shape()
+            cr:set_source(color(clr))
+
             for i = 1, math_min(#group_values, drawn_values_num) do
                 local value = group_values[i]
                 -- Scale the value so that [min_value..max_value] maps to [0..1]
@@ -334,8 +338,7 @@ function graph:draw_values(cr, _, height, drawn_values_num)
                 end
             end
 
-            cr:set_source(color(clr))
-
+            -- Paint the data series
             cr:fill()
         end
     end
