@@ -153,6 +153,7 @@ local properties = { "width", "height", "border_color", "stack",
                      "max_value", "scale", "min_value", "step_shape",
                      "step_spacing", "step_width", "border_width",
                      "clamp_bars", "baseline_value",
+                     "capacity",
 }
 
 function graph:draw(_, cr, width, height)
@@ -167,6 +168,7 @@ function graph:draw(_, cr, width, height)
     local step_width = self._private.step_width or 1
     local border_width = self._private.border_width or 0
     local clamp_bars = self._private.clamp_bars
+    local drawn_values_num = self:compute_drawn_values_num(width)
 
     -- Cache methods used in the inner loop for a 3x performance boost
     local cairo_rectangle = cr.rectangle
@@ -221,6 +223,10 @@ function graph:draw(_, cr, width, height)
             -- Don't draw series altogether if there's no color for them
             if stack_colors[color_idx] then
                 for idx, value in ipairs(stack_values) do
+                    if idx > drawn_values_num then
+                        break
+                    end
+
                     -- drawn_values will have NaN values in it due to negatives/NaNs in input.
                     -- we can't simply treat them like zeros during rendering,
                     -- in case step_shape() draws visible shapes for actual zero values too.
@@ -247,12 +253,17 @@ function graph:draw(_, cr, width, height)
         scaling_values = values
     end
 
-    -- Do we have anything to draw?
-    if true then
+    -- Do we have to draw anything?
+    if drawn_values_num > 0 then
 
         if self._private.scale then
             for _, group_values in ipairs(scaling_values) do
-                for _, v in ipairs(group_values) do
+                for idx, v in ipairs(group_values) do
+                    -- Do not let off-screen values affect autoscaling
+                    if idx > drawn_values_num then
+                        break
+                    end
+
                     -- We don't use math.min/max here to be sure that
                     -- min/max_value don't accidentally get assigned a NaN
                     if v > max_value then
@@ -289,7 +300,7 @@ function graph:draw(_, cr, width, height)
 
             -- Don't draw series altogether if there's no color for them.
             if clr then
-                for i = 1, #group_values do
+                for i = 1, math_min(#group_values, drawn_values_num) do
                     local value = group_values[i]
                     -- Scale the value so that [min_value..max_value] maps to [0..1]
                     value = (value - min_value) / (max_value - min_value)
@@ -355,15 +366,31 @@ function graph.fit(_graph)
     return _graph._private.width, _graph._private.height
 end
 
-function graph:compute_drawn_values_num()
+function graph:compute_drawn_values_num(widget_width)
+    -- graph:draw() could be called with a different width,
+    -- than is stored in _private, hence the need for
+    -- this function to be parametrized
+    widget_width = widget_width or self._private.width
+
     local border_width = self._private.border_width or 0
-    local usable_width = self._private.width - 2*border_width
+    local usable_width = widget_width - 2*border_width
     if usable_width <= 0 then
         return 0
     end
     local step_width = self._private.step_width or 1
     local step_spacing = self._private.step_spacing or 0
     return math.ceil(usable_width / (step_width + step_spacing))
+end
+
+local function guess_capacity(self)
+    local capacity = self._private.capacity
+    if capacity then
+        return capacity
+    end
+
+    -- Calculate an appropriate capacity from drawn values num
+    -- with some wiggle room for widget resizes
+    return math.ceil(self:compute_drawn_values_num()/64 + 1)*64
 end
 
 --- Add a value to the graph
@@ -375,7 +402,8 @@ function graph:add_value(value, group)
     value = value or 0
     group = group or 1
 
-    local max_values_num = self:compute_drawn_values_num()
+    local max_values_num = guess_capacity(self)
+
     if not (max_values_num >= 0) then
         -- Map negatives and NaNs to zero to
         -- avoid spinning forever in the while loop below,
@@ -391,7 +419,7 @@ function graph:add_value(value, group)
 
     table.insert(values, 1, value)
 
-    -- Ensure we never have more data than we can draw
+    -- Remove old values over capacity
     while #values > max_values_num do
         table.remove(values)
     end
@@ -406,6 +434,24 @@ end
 function graph:clear()
     self._private.values = {}
     self:emit_signal("widget::redraw_needed")
+    return self
+end
+
+--- Set the graph capacity.
+--
+-- @property capacity
+-- @tparam[opt=nil] number|nil capacity The maximum number of values to keep per data group (`nil` for automatic guess).
+-- @propemits true false
+function graph:set_capacity(capacity)
+    -- Property override to avoid emitting the "redraw_needed" signal,
+    -- because nothing visibly changes until the next add_value() call,
+    -- which emits the signal itself.
+    -- It might have been prudent to truncate the values array here
+    -- and emit the signal, but I don't think anyone really needs that.
+    if self._private.capacity ~= capacity then
+        self._private.capacity = capacity
+        self:emit_signal("property::capacity", capacity)
+    end
     return self
 end
 
