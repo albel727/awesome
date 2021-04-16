@@ -158,16 +158,16 @@ local properties = { "width", "height", "border_color", "stack",
                      "max_value", "scale", "min_value", "step_shape",
                      "step_spacing", "step_width", "border_width" }
 
-function graph.draw(_graph, _, cr, width, height)
-    local max_value = _graph._private.max_value
-    local min_value = _graph._private.min_value or (
-        _graph._private.scale and math.huge or 0)
-    local values = _graph._private.values
+function graph:draw(_, cr, width, height)
+    local max_value = self._private.max_value
+    local min_value = self._private.min_value or (
+        self._private.scale and math.huge or 0)
+    local values = self._private.values
 
-    local step_shape = _graph._private.step_shape
-    local step_spacing = _graph._private.step_spacing or 0
-    local step_width = _graph._private.step_width or 1
-    local bw = _graph._private.border_width or 1
+    local step_shape = self._private.step_shape
+    local step_spacing = self._private.step_spacing or 0
+    local step_width = self._private.step_width or 1
+    local bw = self._private.border_width or 1
 
     local draw_with_lines = not step_shape and step_width == 1
 
@@ -177,13 +177,13 @@ function graph.draw(_graph, _, cr, width, height)
     end
 
     -- Draw the background first
-    cr:set_source(color(_graph._private.background_color or beautiful.graph_bg or "#000000aa"))
+    cr:set_source(color(self._private.background_color or beautiful.graph_bg or "#000000aa"))
     cr:paint()
 
     -- Account for the border width
     cr:save()
 
-    if _graph._private.border_color then
+    if self._private.border_color then
         cr:translate(bw, bw)
         width, height = width - 2*bw, height - 2*bw
     end
@@ -192,9 +192,9 @@ function graph.draw(_graph, _, cr, width, height)
     local pristine_transform = step_shape and cr:get_matrix()
 
     -- Draw a stacked graph
-    if _graph._private.stack then
+    if self._private.stack then
 
-        if _graph._private.scale then
+        if self._private.scale then
             local acc = {}
             for _, v in ipairs(values) do
                 for idx, sv in ipairs(v) do
@@ -215,8 +215,8 @@ function graph.draw(_graph, _, cr, width, height)
             local rel_i = 0
             local rel_x = i + 0.5
 
-            if _graph._private.stack_colors then
-                for idx, col in ipairs(_graph._private.stack_colors) do
+            if self._private.stack_colors then
+                for idx, col in ipairs(self._private.stack_colors) do
                     local stack_values = values[idx]
                     if stack_values and i < #stack_values then
                         local value = stack_values[i + 1] + rel_i
@@ -233,7 +233,7 @@ function graph.draw(_graph, _, cr, width, height)
         -- Non-stacked graph draws the default value group #1
         values = values[1] or {}
 
-        if _graph._private.scale then
+        if self._private.scale then
             for _, v in ipairs(values) do
                 if v > max_value then
                     max_value = v
@@ -281,7 +281,7 @@ function graph.draw(_graph, _, cr, width, height)
                     end
                 end
             end
-            cr:set_source(color(_graph._private.color or beautiful.graph_fg or "#ff0000"))
+            cr:set_source(color(self._private.color or beautiful.graph_fg or "#ff0000"))
 
             if draw_with_lines then
                 cr:stroke()
@@ -296,7 +296,7 @@ function graph.draw(_graph, _, cr, width, height)
     cr:restore()
 
     -- Draw the border last so that it overlaps already drawn values
-    if _graph._private.border_color then
+    if self._private.border_color then
         -- We decremented these by two above
         width, height = width + 2*bw, height + 2*bw
 
@@ -304,7 +304,7 @@ function graph.draw(_graph, _, cr, width, height)
 
         -- Draw the border
         cr:rectangle(bw/2, bw/2, width - bw, height - bw)
-        cr:set_source(color(_graph._private.border_color or beautiful.graph_border_color or "#ffffff"))
+        cr:set_source(color(self._private.border_color or beautiful.graph_border_color or "#ffffff"))
         cr:stroke()
     end
 end
