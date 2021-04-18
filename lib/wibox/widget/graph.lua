@@ -170,6 +170,84 @@ local function graph_gather_drawn_values_num_stats(self, new_value)
     end
 end
 
+function graph:pick_data_group_color(group_idx)
+    -- Use an individual group color, if there's one
+    local data_group_colors = self._private.stack_colors
+    local clr = data_group_colors and data_group_colors[group_idx]
+    -- Or fall back to some other colors
+    return clr or self._private.color or beautiful.graph_fg or "#ff0000"
+end
+
+function graph:should_draw_data_group(group_idx)
+    -- This default implementation decides, whether a group should be drawn,
+    -- based on presence of colors, for reasons of backward compatibility.
+    local data_group_colors = self._private.stack_colors
+    if not data_group_colors then
+        -- The colors table isn't set, all data groups are deemed enabled.
+        return true
+    end
+
+    -- A group is enabled if it has a color, i.e. nil color means "don't draw it"
+    return not not data_group_colors[group_idx]
+end
+
+function graph:preprocess_values(values, drawn_values_num)
+    -- TODO: elevate to function documentation, if we decide to make it public API.
+    --- Preprocesses values before drawing them.
+    -- This function can return up to 2 values: drawn_values and scaling_values
+    -- The former will be used as values to draw in place of the original data.
+    -- The latter will be used as values to scan for min/max value for scaling.
+    -- Either can be nil, which means: use values as is.
+
+    -- This default implementation is only used to implement
+    -- presumming values for stacked graphs.
+    if not self._private.stack then
+        return
+    end
+
+    -- Prepare to draw a stacked graph
+
+    -- summed_values[i] = sum [1,#values] of values[c][i]
+    local summed_values = {}
+    -- drawn_values[c][i] = sum [1,c] of values[c][i]
+    local drawn_values = {}
+
+    local nan = 0/0
+
+    -- Add stacked values up to get values we need to render
+    for group_idx, group_values in ipairs(values) do
+        local drawn_row = {}
+        drawn_values[group_idx] = drawn_row
+
+        if self:should_draw_data_group(group_idx) then
+            for idx, value in ipairs(group_values) do
+                if idx > drawn_values_num then
+                    break
+                end
+
+                -- drawn_values will have NaN values in it due to negatives/NaNs in input.
+                -- we can't simply treat them like zeros during rendering,
+                -- in case step_shape() draws visible shapes for actual zero values too.
+                local acc = summed_values[idx] or 0
+                if value >= 0 then
+                    acc = acc + value
+                    drawn_row[idx] = acc
+                else
+                    drawn_row[idx] = nan
+                end
+                summed_values[idx] = acc
+            end
+        end
+    end
+
+    -- In a stacked graph it's sufficient to examine only the last summed row
+    -- to determine the max_value, since all values are necessarily >= 0
+    -- and the min_value should be always at most 0
+    local scaling_values = { {0}, summed_values }
+
+    return drawn_values, scaling_values
+end
+
 function graph:draw_values(cr, _, height, drawn_values_num)
     local max_value = self._private.max_value or (
         self._private.scale and -math.huge or 1)
@@ -190,68 +268,12 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     -- Preserve the transform centered at the top-left corner of the graph
     local pristine_transform = step_shape and cr:get_matrix()
 
-    local stack_colors = self._private.stack_colors
-    if not stack_colors then
-        -- If there are no individual colors for data series,
-        -- draw them all with the default color.
-        local clr = self._private.color or beautiful.graph_fg or "#ff0000"
-        stack_colors = {}
-        -- We're doing this instead of simply setting stack_colors to {},
-        -- because stack_colors[group] == nil means "don't draw this group"
-        for group = 1, #values do
-            stack_colors[group] = clr
-        end
-    end
-
-    local scaling_values
-    local drawn_values
-    local nan = 0/0
-
-    if self._private.stack then
-        -- Prepare to draw a stacked graph
-
-        -- summed_values[i] = sum [1,#values] of values[c][i]
-        local summed_values = {}
-        -- drawn_values[c][i] = sum [1,c] of values[c][i]
-        drawn_values = {}
-
-        -- Add stacked values up to get values we need to render
-        for color_idx, stack_values in ipairs(values) do
-            local drawn_row = {}
-            drawn_values[color_idx] = drawn_row
-
-            -- Don't draw series altogether if there's no color for them
-            if stack_colors[color_idx] then
-                for idx, value in ipairs(stack_values) do
-                    if idx > drawn_values_num then
-                        break
-                    end
-
-                    -- drawn_values will have NaN values in it due to negatives/NaNs in input.
-                    -- we can't simply treat them like zeros during rendering,
-                    -- in case step_shape() draws visible shapes for actual zero values too.
-                    local acc = summed_values[idx] or 0
-                    if value >= 0 then
-                        acc = acc + value
-                        drawn_row[idx] = acc
-                    else
-                        drawn_row[idx] = nan
-                    end
-                    summed_values[idx] = acc
-                end
-            end
-        end
-
-        -- In a stacked graph it's sufficient to examine only the cumulative sum row
-        -- to determine the max_value, since all values are necessarily >= 0
-        -- and the min_value should be always at most 0
-        scaling_values = { {0}, summed_values }
-    else
-        -- A non-stacked graph is just like a stacked graph
-        drawn_values = values
-        -- But all values need to be examined to determine proper scaling
-        scaling_values = values
-    end
+    local drawn_values, scaling_values = self:preprocess_values(values, drawn_values_num)
+    -- If preprocessor returned drawn_values = nil, then simply draw the values we have
+    drawn_values = drawn_values or values
+    -- If preprocessor returned scaling_values = nil, then
+    -- all drawn values need to be examined to determine proper scaling
+    scaling_values = scaling_values or drawn_values
 
     if self._private.scale then
         for _, group_values in ipairs(scaling_values) do
@@ -292,14 +314,11 @@ function graph:draw_values(cr, _, height, drawn_values_num)
 
     local prev_y = self._private.stack and {}
 
-    for color_idx, group_values in ipairs(drawn_values) do
-        local clr = stack_colors[color_idx]
-
-        -- Don't draw series altogether if there's no color for them.
-        if clr then
+    for group_idx, group_values in ipairs(drawn_values) do
+        if self:should_draw_data_group(group_idx) then
             -- Set the data series' color early, in case the user
             -- wants to do their own painting inside step_shape()
-            cr:set_source(color(clr))
+            cr:set_source(color(self:pick_data_group_color(group_idx)))
 
             for i = 1, math_min(#group_values, drawn_values_num) do
                 local value = group_values[i]
