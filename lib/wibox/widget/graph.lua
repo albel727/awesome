@@ -24,6 +24,7 @@ local math_max = math.max
 local math_min = math.min
 local table = table
 local color = require("gears.color")
+local gdebug = require("gears.debug")
 local gtable = require("gears.table")
 local base = require("wibox.widget.base")
 local beautiful = require("beautiful")
@@ -401,8 +402,8 @@ function graph:draw(_, cr, width, height)
     end
 end
 
-function graph.fit(_graph)
-    return _graph._private.width, _graph._private.height
+function graph:fit(_, width, height)
+    return width, height
 end
 
 function graph:compute_drawn_values_num(usable_width)
@@ -503,12 +504,21 @@ end
 -- @propemits true false
 
 function graph:set_height(height)
-    if height >= 5 then
-        self._private.height = height
-        self:emit_signal("widget::layout_changed")
-        self:emit_signal("property::height", height)
+    gdebug.deprecate("Use a `wibox.container.constraint` widget or `forced_height`", {deprecated_in=5})
+    if awesome.api_level <= 5 then
+        if height >= 5 then
+            -- this sends "layout_changed" for us
+            self:set_forced_height(height)
+            -- signal, because we did it before
+            self:emit_signal("property::height", height)
+        end
+        return self
     end
-    return self
+end
+
+function graph:get_height()
+    gdebug.deprecate("Use `forced_height`", {deprecated_in=5})
+    return awesome.api_level <= 5 and self._private.forced_height or nil
 end
 
 --- Set the graph width.
@@ -518,12 +528,21 @@ end
 -- @propemits true false
 
 function graph:set_width(width)
-    if width >= 5 then
-        self._private.width = width
-        self:emit_signal("widget::layout_changed")
-        self:emit_signal("property::width", width)
+    gdebug.deprecate("Use a `wibox.container.constraint` widget or `forced_width`", {deprecated_in=5})
+    if awesome.api_level <= 5 then
+        if width >= 5 then
+            -- this sends "layout_changed" for us
+            self:set_forced_width(width)
+            -- signal, because we did it before
+            self:emit_signal("property::width", width)
+        end
+        return self
     end
-    return self
+end
+
+function graph:get_width()
+    gdebug.deprecate("Use `forced_width`", {deprecated_in=5})
+    return awesome.api_level <= 5 and self._private.forced_width or nil
 end
 
 -- Build properties function
@@ -554,15 +573,27 @@ end
 function graph.new(args)
     args = args or {}
 
-    local width = args.width or 100
-    local height = args.height or 20
-
-    if width < 5 or height < 5 then return end
-
     local _graph = base.make_widget(nil, nil, {enable_properties = true})
 
-    _graph._private.width     = width
-    _graph._private.height    = height
+    if args.width or args.height then
+        gdebug.deprecate(
+            "`args.width` and `args.height` are deprecated. "..
+            "Use a `wibox.container.constraint` widget "..
+            "or `forced_width`/`forced_height`",
+            {deprecated_in=5, raw=true}
+        )
+    end
+
+    if awesome.api_level <= 5 then
+        local width = args.width or 100
+        local height = args.height or 20
+
+        if width < 5 or height < 5 then return end
+
+        _graph._private.forced_width = width
+        _graph._private.forced_height = height
+    end
+
     _graph._private.values    = {}
     _graph._private.clamp_bars = true
 
