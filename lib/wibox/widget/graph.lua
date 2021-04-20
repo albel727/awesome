@@ -499,10 +499,13 @@ end
 
 --- Set the graph height.
 --
--- @property height
+-- This property is deprecated.  Use a `wibox.container.constraint` widget or
+-- `forced_height`.
+---
+-- @deprecatedproperty height
 -- @tparam number height The height to set.
+-- @renamedin 5.0 forced_height
 -- @propemits true false
-
 function graph:set_height(height)
     gdebug.deprecate("Use a `wibox.container.constraint` widget or `forced_height`", {deprecated_in=5})
     if awesome.api_level <= 5 then
@@ -523,10 +526,13 @@ end
 
 --- Set the graph width.
 --
--- @property width
--- @param number width The width to set.
+-- This property is deprecated.  Use a `wibox.container.constraint` widget or
+-- `forced_width`.
+---
+-- @deprecatedproperty width
+-- @tparam number width The width to set.
+-- @renamedin 5.0 forced_width
 -- @propemits true false
-
 function graph:set_width(width)
     gdebug.deprecate("Use a `wibox.container.constraint` widget or `forced_width`", {deprecated_in=5})
     if awesome.api_level <= 5 then
@@ -566,8 +572,7 @@ end
 
 --- Create a graph widget.
 --
--- @tparam table args Standard widget() arguments. You should add width and height
--- key to set graph geometry.
+-- @tparam table args Standard widget() arguments.
 -- @treturn wibox.widget.graph A new graph widget.
 -- @constructorfct wibox.widget.graph
 function graph.new(args)
