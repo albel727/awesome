@@ -249,6 +249,23 @@ function graph:preprocess_values(values, drawn_values_num)
     return drawn_values, scaling_values
 end
 
+local function graph_map_value_to_widget_coordinates(self, value, min_value, max_value, height)
+    -- Scale the value so that [min_value..max_value] maps to [0..1]
+    value = (value - min_value) / (max_value - min_value)
+
+    -- Check whether value is NaN
+    if value == value then
+        if self._private.clamp_bars then
+            -- Don't allow the bar to exceed widget's dimensions
+            value = math_min(1, math_max(0, value))
+        end
+
+        -- Drawing bars up from the lower edge of the widget
+        return height * (1 - value)
+    end
+    return value --NaN
+end
+
 function graph:draw_values(cr, _, height, drawn_values_num)
     local max_value = self._private.max_value or (
         self._private.scale and -math.huge or 1)
@@ -259,12 +276,12 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     local step_shape = self._private.step_shape
     local step_spacing = self._private.step_spacing or 0
     local step_width = self._private.step_width or 1
-    local clamp_bars = self._private.clamp_bars
 
     -- Cache methods used in the inner loop for a 3x performance boost
     local cairo_rectangle = cr.rectangle
     local cairo_translate = cr.translate
     local cairo_set_matrix = cr.set_matrix
+    local map_coords = graph_map_value_to_widget_coordinates
 
     -- Preserve the transform centered at the top-left corner of the graph
     local pristine_transform = step_shape and cr:get_matrix()
@@ -305,13 +322,7 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     -- It defaults to the usual zero axis
     local baseline_value = self._private.baseline_value or 0
     -- Let's map it into widget coordinates
-    baseline_value = (baseline_value - min_value) / (max_value - min_value)
-    if clamp_bars then
-        -- Don't allow it to exceed widget's dimensions
-        baseline_value = math_min(1, math_max(0, baseline_value))
-    end
-    -- The position of the baseline in widget coordinates
-    local baseline_y = height * (1 - baseline_value)
+    local baseline_y = map_coords(self, baseline_value, min_value, max_value, height)
 
     local prev_y = self._private.stack and {}
 
@@ -323,21 +334,14 @@ function graph:draw_values(cr, _, height, drawn_values_num)
 
             for i = 1, math_min(#group_values, drawn_values_num) do
                 local value = group_values[i]
-                -- Scale the value so that [min_value..max_value] maps to [0..1]
-                value = (value - min_value) / (max_value - min_value)
 
-                -- Check whether value is NaN
-                if value == value then
-                    if clamp_bars then
-                        -- Don't allow the bar to exceed widget's dimensions
-                        value = math_min(1, math_max(0, value))
-                    end
+                local value_y = map_coords(self, value, min_value, max_value, height)
+                local not_nan = value_y == value_y
 
+                if not_nan then
                     -- The coordinate of the i-th bar's left edge
                     local x = (i-1)*(step_width + step_spacing)
 
-                    -- Drawing bars up from the lower edge of the widget
-                    local value_y = height * (1 - value)
                     local base_y = baseline_y
                     if prev_y then
                         -- Draw from where the previous stacked series left off
