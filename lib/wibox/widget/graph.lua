@@ -474,7 +474,7 @@ end
 -- @tparam number value The value to be added to the graph
 -- @tparam[opt] number group The stack color group index.
 function graph:add_value(value, group)
-    value = value or 0
+    value = value or 0/0 -- default to NaN
     group = group or 1
 
     local values = self._private.values
