@@ -154,8 +154,22 @@ local properties = { "width", "height", "border_color", "stack",
                      "max_value", "scale", "min_value", "step_shape",
                      "step_spacing", "step_width", "border_width",
                      "clamp_bars", "baseline_value",
-                     "capacity",
+                     "capacity", "nan_color", "nan_indication",
 }
+
+-- Yellow-black danger stripe color for NaNs
+local default_nan_color = color.create_pattern_uncached({
+    type = "linear", from = {0, 0}, to = {4, 4},
+    stops={
+        {0, "#000000"},
+        {0.25, "#000000"}, {0.25, "#ffff00"},
+        {0.50, "#ffff00"}, {0.50, "#000000"},
+        {0.75, "#000000"}, {0.75, "#ffff00"},
+        {1, "#ffff00"},
+    },
+})
+
+default_nan_color:set_extend("REPEAT")
 
 local function graph_gather_drawn_values_num_stats(self, new_value)
     if not (new_value >= 0) then
@@ -324,6 +338,7 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     -- Let's map it into widget coordinates
     local baseline_y = map_coords(self, baseline_value, min_value, max_value, height)
 
+    local nan_x = self._private.nan_indication and {}
     local prev_y = self._private.stack and {}
 
     for group_idx, group_values in ipairs(drawn_values) do
@@ -338,10 +353,10 @@ function graph:draw_values(cr, _, height, drawn_values_num)
                 local value_y = map_coords(self, value, min_value, max_value, height)
                 local not_nan = value_y == value_y
 
-                if not_nan then
-                    -- The coordinate of the i-th bar's left edge
-                    local x = (i-1)*(step_width + step_spacing)
+                -- The coordinate of the i-th bar's left edge
+                local x = (i-1)*(step_width + step_spacing)
 
+                if not_nan then
                     local base_y = baseline_y
                     if prev_y then
                         -- Draw from where the previous stacked series left off
@@ -360,11 +375,25 @@ function graph:draw_values(cr, _, height, drawn_values_num)
                         cairo_rectangle(cr, x, value_y, step_width, base_y - value_y)
                     end
                 end
+
+                if not not_nan and nan_x then
+                    -- Keep the coordinate to draw NaN indication later
+                    table.insert(nan_x, x)
+                end
             end
 
             -- Paint the data series
             cr:fill()
         end
+    end
+
+    if nan_x and #nan_x > 0 then
+        cr:set_source(color(self._private.nan_color or default_nan_color))
+        for _, x in ipairs(nan_x) do
+            -- Draw full-height rectangle with nan_color to indicate NaN
+            cairo_rectangle(cr, x, 0, step_width, height)
+        end
+        cr:fill()
     end
 end
 
@@ -605,6 +634,7 @@ function graph.new(args)
 
     _graph._private.values    = {}
     _graph._private.clamp_bars = true
+    _graph._private.nan_indication = true
 
     -- Copy methods and properties over
     gtable.crush(_graph, graph, true)
