@@ -1,6 +1,7 @@
 --DOC_GEN_IMAGE --DOC_HIDE
 local parent = ... --DOC_HIDE
 local wibox  = require("wibox") --DOC_HIDE
+local gears  = {shape = require("gears.shape")} --DOC_HIDE
 
 local data = {
     -5, -4, 0/0, -2, -1, 0/0, 1, 2, 3, 0/0, 5,
@@ -14,6 +15,7 @@ wibox.widget {
     -- default nan_color
     step_width    = 9,
     step_spacing  = 1,
+    step_shape    = gears.shape.rectangle, --DOC_HIDE
     scale         = true, --DOC_HIDE
     border_width  = 2, --DOC_HIDE
     margins       = 5, --DOC_HIDE
@@ -29,6 +31,7 @@ wibox.widget {
     nan_color     = "#ff00007f",
     step_width    = 9,
     step_spacing  = 1,
+    step_shape    = gears.shape.rectangle, --DOC_HIDE
     scale         = true, --DOC_HIDE
     border_width  = 2, --DOC_HIDE
     margins       = 5, --DOC_HIDE
@@ -43,6 +46,7 @@ wibox.widget {
     nan_indication = false,
     step_width     = 9,
     step_spacing   = 1,
+    step_shape     = gears.shape.rectangle, --DOC_HIDE
     scale          = true, --DOC_HIDE
     border_width   = 2, --DOC_HIDE
     margins        = 5, --DOC_HIDE
