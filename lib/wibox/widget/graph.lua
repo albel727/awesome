@@ -591,7 +591,16 @@ function graph:add_value(value, group)
 
     local values = self._private.values
     if not values[group] then
-        values[group] = {}
+        -- Ensure that there are no gaps in the values array,
+        -- so that ipairs() can reach all data groups.
+        for i = #values+1, group do
+            values[i] = {}
+        end
+        -- If the above loop hasn't set it, then
+        -- `group` wasn't a non-negative integer.
+        if not values[group] then
+            error("Invalid data group index: " .. tostring(group))
+        end
     end
     values = values[group]
 
