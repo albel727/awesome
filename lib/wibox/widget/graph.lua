@@ -129,6 +129,24 @@ local graph = { mt = {} }
 -- @tparam boolean scale
 -- @propemits true false
 
+--- Clamp graph bars to keep them inside the widget for out-of-range values.
+--
+-- Drawing values outside the [`min_value`, `max_value`] range leads to
+-- bar shapes that exceed physical widget dimensions.
+-- Most of the time this doesn't matter, because bar shapes are rectangles
+-- and bar heights aren't large enough to trigger errors in the drawing system.
+-- However for some shapes and values it does make a difference and leads
+-- to visibly different and/or invalid result.
+--
+-- When this property is set to true (the default), the graph clamps
+-- bars' heights to keep them within the graph.
+--
+-- @DOC_wibox_widget_graph_clamp_bars_EXAMPLE@
+--
+-- @property clamp_bars
+-- @tparam boolean clamp_bars
+-- @propemits true false
+
 --- Set the width or the individual steps.
 --
 --@DOC_wibox_widget_graph_step_EXAMPLE@
