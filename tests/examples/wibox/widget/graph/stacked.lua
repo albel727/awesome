@@ -38,10 +38,10 @@ local colors = {
 local w = --DOC_HIDE
 
 wibox.widget {
-    max_value     = 29,
     stack         = true,
-    border_width  = 2, --DOC_HIDE
     group_colors  = colors,
+    max_value     = 29, --DOC_HIDE
+    border_width  = 2, --DOC_HIDE
     margins       = 5, --DOC_HIDE
     widget        = wibox.widget.graph,
 }
