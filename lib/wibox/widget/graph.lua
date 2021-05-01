@@ -182,7 +182,8 @@ local graph = { mt = {} }
 
 --- Set the graph to draw stacks. Default is false.
 --
---@DOC_wibox_widget_graph_stacked_EXAMPLE@
+-- @DOC_wibox_widget_graph_normal_vs_stacked_EXAMPLE@
+--
 -- @property stack
 -- @tparam boolean stack
 -- @propemits true false
