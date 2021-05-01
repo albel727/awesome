@@ -182,13 +182,44 @@ local graph = { mt = {} }
 
 --- Set the graph to draw stacks. Default is false.
 --
+-- When set to true, bars of each successive data group are drawn on top of
+-- bars of previous groups, instead of the baseline.
+-- This necessitates all data values to be non-negative.
+-- Negative values, if present, will trigger @{nan_color|NaN indication}.
+--
 -- @DOC_wibox_widget_graph_normal_vs_stacked_EXAMPLE@
 --
 -- @property stack
 -- @tparam boolean stack
 -- @propemits true false
 
+--- Display NaN indication. Default is true.
 --
+-- When the data contains [NaN](https://en.wikipedia.org/wiki/NaN) values,
+-- and `nan_indication` is set, the corresponding area,
+-- where the value bar should have been drawn, is filled
+-- with the `nan_color` from top to bottom.
+-- The painting is done after all other data is rendered,
+-- to make sure that it won't be overpainted and go unnoticed.
+--
+-- @DOC_wibox_widget_graph_nan_color_EXAMPLE@
+--
+-- @property nan_indication
+-- @tparam boolean nan_indication
+-- @propemits true false
+
+--- The color of NaN indication.
+--
+-- The color used when `nan_indication` is set.
+-- Defaults to a yellow-black diagonal stripes pattern.
+--
+-- @DOC_wibox_widget_graph_stacked_nan_EXAMPLE@
+--
+-- @property nan_color
+-- @tparam gears.color nan_color The color of NaN indication.
+-- @propemits true false
+-- @see gears.color
+
 --- The graph foreground color
 -- Used, when the `color` property isn't set.
 --
