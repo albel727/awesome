@@ -500,11 +500,23 @@ local function guess_capacity(self)
     return math.ceil(ldwn/64 + 1)*64
 end
 
---- Add a value to the graph
+--- Add a value to the graph.
+--
+-- The graph widget keeps its values grouped in _data groups_. Each data group
+-- is drawn with its own set of bars, starting with the latest value
+-- in the data group at the left edge of the graph.
+--
+-- Simply calling this method with a particular data group index is the only
+-- thing necessary and sufficient for creating a data group.
+-- Any natural integer as a group number is ok, but the user is advised to keep
+-- the group numbers low and consecutive for performance reasons.
+--
+-- There are no constraints on the value parameter, other than it should
+-- be a number.
 --
 -- @method add_value
--- @tparam number value The value to be added to the graph
--- @tparam[opt] number group The stack color group index.
+-- @tparam[opt=NaN] number value The value to be added to a graph's data group.
+-- @tparam[opt=1] integer group The index of the data group.
 function graph:add_value(value, group)
     value = value or 0/0 -- default to NaN
     group = group or 1
@@ -536,6 +548,8 @@ function graph:add_value(value, group)
 end
 
 --- Clear the graph.
+--
+-- Removes all values from all data groups.
 --
 -- @method clear
 function graph:clear()
