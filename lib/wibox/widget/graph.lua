@@ -370,34 +370,12 @@ local function graph_map_value_to_widget_coordinates(self, value, min_value, max
     return value --NaN
 end
 
-function graph:draw_values(cr, _, height, drawn_values_num)
-    local max_value = self._private.max_value or (
-        self._private.scale and -math.huge or 1)
-    local min_value = self._private.min_value or (
-        self._private.scale and math.huge or 0)
-    local values = self._private.values
+local function graph_choose_coordinate_system(self, scaling_values, drawn_values_num, height)
+    local scale = self._private.scale
+    local max_value = self._private.max_value or (scale and -math.huge or 1)
+    local min_value = self._private.min_value or (scale and math.huge or 0)
 
-    local step_shape = self._private.step_shape
-    local step_spacing = self._private.step_spacing or 0
-    local step_width = self._private.step_width or 1
-
-    -- Cache methods used in the inner loop for a 3x performance boost
-    local cairo_rectangle = cr.rectangle
-    local cairo_translate = cr.translate
-    local cairo_set_matrix = cr.set_matrix
-    local map_coords = graph_map_value_to_widget_coordinates
-
-    -- Preserve the transform centered at the top-left corner of the graph
-    local pristine_transform = step_shape and cr:get_matrix()
-
-    local drawn_values, scaling_values = self:preprocess_values(values, drawn_values_num)
-    -- If preprocessor returned drawn_values = nil, then simply draw the values we have
-    drawn_values = drawn_values or values
-    -- If preprocessor returned scaling_values = nil, then
-    -- all drawn values need to be examined to determine proper scaling
-    scaling_values = scaling_values or drawn_values
-
-    if self._private.scale then
+    if scale then
         for _, group_values in ipairs(scaling_values) do
             for idx, v in ipairs(group_values) do
                 -- Do not let off-screen values affect autoscaling
@@ -426,7 +404,39 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     -- It defaults to the usual zero axis
     local baseline_value = self._private.baseline_value or 0
     -- Let's map it into widget coordinates
-    local baseline_y = map_coords(self, baseline_value, min_value, max_value, height)
+    local baseline_y = graph_map_value_to_widget_coordinates(
+        self, baseline_value, min_value, max_value, height
+    )
+
+    return min_value, max_value, baseline_y
+end
+
+function graph:draw_values(cr, _, height, drawn_values_num)
+    local values = self._private.values
+
+    local step_shape = self._private.step_shape
+    local step_spacing = self._private.step_spacing or 0
+    local step_width = self._private.step_width or 1
+
+    -- Cache methods used in the inner loop for a 3x performance boost
+    local cairo_rectangle = cr.rectangle
+    local cairo_translate = cr.translate
+    local cairo_set_matrix = cr.set_matrix
+    local map_coords = graph_map_value_to_widget_coordinates
+
+    -- Preserve the transform centered at the top-left corner of the graph
+    local pristine_transform = step_shape and cr:get_matrix()
+
+    local drawn_values, scaling_values = self:preprocess_values(values, drawn_values_num)
+    -- If preprocessor returned drawn_values = nil, then simply draw the values we have
+    drawn_values = drawn_values or values
+    -- If preprocessor returned scaling_values = nil, then
+    -- all drawn values need to be examined to determine proper scaling
+    scaling_values = scaling_values or drawn_values
+
+    local min_value, max_value, baseline_y = graph_choose_coordinate_system(
+        self, scaling_values, drawn_values_num, height
+    )
 
     local nan_x = self._private.nan_indication and {}
     local prev_y = self._private.stack and {}
