@@ -147,6 +147,14 @@ local graph = { mt = {} }
 -- @tparam boolean clamp_bars
 -- @propemits true false
 
+--- The value corresponding to the starting point of graph bars. Default is 0.
+--
+-- @DOC_wibox_widget_graph_baseline_value_EXAMPLE@
+--
+-- @property baseline_value
+-- @tparam number baseline_value
+-- @propemits true false
+
 --- Set the width or the individual steps.
 --
 --@DOC_wibox_widget_graph_step_EXAMPLE@
