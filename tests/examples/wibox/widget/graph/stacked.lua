@@ -41,7 +41,7 @@ wibox.widget {
     max_value     = 29,
     stack         = true,
     border_width  = 2, --DOC_HIDE
-    stack_colors  = colors,
+    group_colors  = colors,
     margins       = 5, --DOC_HIDE
     widget        = wibox.widget.graph,
 }

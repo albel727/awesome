@@ -27,7 +27,7 @@ local w_default = --DOC_HIDE
 wibox.widget {
     --default nan_color
     stack        = true,
-    stack_colors = colors,
+    group_colors = colors,
     step_width   = 1,
     step_spacing = 1,
     scale        = true, --DOC_HIDE
@@ -43,7 +43,7 @@ local w_custom = --DOC_HIDE
 wibox.widget {
     nan_color    = "#ff00ff7f",
     stack        = true,
-    stack_colors = colors,
+    group_colors = colors,
     step_width   = 1,
     step_spacing = 1,
     scale        = true, --DOC_HIDE
@@ -59,7 +59,7 @@ local w_false = --DOC_HIDE
 wibox.widget {
     nan_indication = false,
     stack          = true,
-    stack_colors   = colors,
+    group_colors   = colors,
     step_width     = 1,
     step_spacing   = 1,
     scale          = true, --DOC_HIDE

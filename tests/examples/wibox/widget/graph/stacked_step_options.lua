@@ -42,7 +42,7 @@ wibox.widget {
     max_value     = 66,
     stack         = true,
     border_width  = 2, --DOC_HIDE
-    stack_colors  = colors,
+    group_colors  = colors,
     step_width    = 5,
     step_spacing  = 1,
     step_shape    = gears.shape.rounded_bar,

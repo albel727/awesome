@@ -44,7 +44,7 @@ local colors_disabled = {
 local w1 = --DOC_HIDE
 wibox.widget {
     stack         = true,
-    stack_colors  = colors_normal,
+    group_colors  = colors_normal,
     max_value     = 66, --DOC_HIDE
     border_width  = 2, --DOC_HIDE
     step_width    = 5, --DOC_HIDE
@@ -59,7 +59,7 @@ wibox.widget {
 local w2 = --DOC_HIDE
 wibox.widget {
     stack         = true,
-    stack_colors  = colors_transparent,
+    group_colors  = colors_transparent,
     max_value     = 66, --DOC_HIDE
     border_width  = 2, --DOC_HIDE
     step_width    = 5, --DOC_HIDE
@@ -74,7 +74,7 @@ wibox.widget {
 local w3 = --DOC_HIDE
 wibox.widget {
     stack         = true,
-    stack_colors  = colors_disabled,
+    group_colors  = colors_disabled,
     max_value     = 66, --DOC_HIDE
     border_width  = 2, --DOC_HIDE
     step_width    = 5, --DOC_HIDE

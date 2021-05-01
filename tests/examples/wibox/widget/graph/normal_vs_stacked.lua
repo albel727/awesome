@@ -36,7 +36,7 @@ end
 local w1 = --DOC_HIDE
 wibox.widget {
     --stack         = false, --default
-    stack_colors  = colors,
+    group_colors  = colors,
     step_width    = 5,
     step_spacing  = 1,
     step_shape    = thin_arrow_shape,
@@ -51,7 +51,7 @@ wibox.widget {
 local w2 = --DOC_HIDE
 wibox.widget {
     stack         = true,
-    stack_colors  = colors,
+    group_colors  = colors,
     step_width    = 5,
     step_spacing  = 1,
     step_shape    = thin_arrow_shape,

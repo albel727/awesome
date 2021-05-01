@@ -31,7 +31,7 @@ wibox.widget {
     max_value    = 29, --DOC_HIDE
     scale        = false,
     stack        = true,
-    stack_colors = colors,
+    group_colors = colors,
     forced_height = 65, --DOC_HIDE
     widget = wibox.widget.graph,
 }
@@ -42,7 +42,7 @@ local w2 = --DOC_HIDE
 wibox.widget {
     scale        = true,
     stack        = true,
-    stack_colors = colors,
+    group_colors = colors,
     forced_height = 65, --DOC_HIDE
     widget = wibox.widget.graph,
 }

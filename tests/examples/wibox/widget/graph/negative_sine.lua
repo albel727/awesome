@@ -28,7 +28,7 @@ local colors = {
 local w = --DOC_HIDE
 wibox.widget {
     stack        = false,
-    stack_colors = colors,
+    group_colors = colors,
     step_width   = 1,
     step_spacing = 1,
     scale        = true,

@@ -52,6 +52,8 @@ local graph = { mt = {} }
 
 --- Set the graph foreground color.
 --
+-- This color is used, when `group_colors` isn't set.
+--
 --@DOC_wibox_widget_graph_color_EXAMPLE@
 --
 -- @property color
@@ -68,6 +70,21 @@ local graph = { mt = {} }
 -- @tparam gears.color background_color The graph background color.
 -- @usebeautiful beautiful.graph_bg
 -- @propemits true false
+-- @see gears.color
+
+--- Set the colors for data groups.
+--
+-- Colors in this table are used to paint respective data groups.
+-- When this property is unset (default), the `color` property is used
+-- instead for all data groups.
+-- When this property is set, but there's no color for a data group in it
+-- (i.e. `group_colors`[group] is nil or false), then the respective
+-- data group is disabled, i.e. not drawn.
+--
+-- @DOC_wibox_widget_graph_stacked_group_disable_EXAMPLE@
+--
+-- @property group_colors
+-- @tparam table colors A table with colors for data groups.
 -- @see gears.color
 
 --- Set the maximum value the graph should handle.
@@ -129,22 +146,21 @@ local graph = { mt = {} }
 -- @tparam boolean stack
 -- @propemits true false
 
---- Set the graph stacking colors. Order matters.
 --
--- @property stack_colors
--- @tparam table stack_colors A table with stacking colors.
-
---- The graph background color.
---
--- @beautiful beautiful.graph_bg
--- @param color
-
---- The graph foreground color.
+--- The graph foreground color
+-- Used, when the `color` property isn't set.
 --
 -- @beautiful beautiful.graph_fg
 -- @param color
 
+--- The graph background color.
+-- Used, when the `background_color` property isn't set.
+--
+-- @beautiful beautiful.graph_bg
+-- @param color
+
 --- The graph border color.
+-- Used, when the `border_color` property isn't set.
 --
 -- @beautiful beautiful.graph_border_color
 -- @param color
@@ -155,6 +171,7 @@ local properties = { "width", "height", "border_color", "stack",
                      "step_spacing", "step_width", "border_width",
                      "clamp_bars", "baseline_value",
                      "capacity", "nan_color", "nan_indication",
+                     "group_colors",
 }
 
 -- Yellow-black danger stripe color for NaNs
@@ -187,7 +204,7 @@ end
 
 function graph:pick_data_group_color(group_idx)
     -- Use an individual group color, if there's one
-    local data_group_colors = self._private.stack_colors
+    local data_group_colors = self._private.group_colors
     local clr = data_group_colors and data_group_colors[group_idx]
     -- Or fall back to some other colors
     return clr or self._private.color or beautiful.graph_fg or "#ff0000"
@@ -196,7 +213,7 @@ end
 function graph:should_draw_data_group(group_idx)
     -- This default implementation decides, whether a group should be drawn,
     -- based on presence of colors, for reasons of backward compatibility.
-    local data_group_colors = self._private.stack_colors
+    local data_group_colors = self._private.group_colors
     if not data_group_colors then
         -- The colors table isn't set, all data groups are deemed enabled.
         return true
@@ -583,6 +600,33 @@ function graph:get_width()
     gdebug.deprecate("Use `forced_width`", {deprecated_in=5})
     return awesome.api_level <= 5 and self._private.forced_width or nil
 end
+
+--- Set the colors for data groups.
+--
+-- This property is deprecated. Use `group_colors` instead.
+---
+-- @deprecatedproperty stack_colors
+-- @renamedin 5.0 group_colors
+-- @tparam table colors A table with colors for data groups.
+-- @see group_colors
+function graph:set_stack_colors(colors)
+    gdebug.deprecate("Use `group_colors`", {deprecated_in=5})
+    if awesome.api_level <= 5 then
+        if self._private.group_colors ~= colors then
+            -- this sends "redraw_needed" for us
+            self:set_group_colors(colors)
+            -- signal, because we did it before
+            self:emit_signal("property::stack_colors", colors)
+        end
+        return self
+    end
+end
+
+function graph:get_stack_colors()
+    gdebug.deprecate("Use `group_colors`", {deprecated_in=5})
+    return awesome.api_level <= 5 and self._private.group_colors or nil
+end
+
 
 -- Build properties function
 for _, prop in ipairs(properties) do
