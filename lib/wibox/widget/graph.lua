@@ -87,18 +87,25 @@ local graph = { mt = {} }
 -- @tparam table colors A table with colors for data groups.
 -- @see gears.color
 
---- Set the maximum value the graph should handle.
+--- The maximum value the graph should handle.
+--
+-- This value corresponds to the top of the graph.
+-- If `scale` is also set, the graph never scales up below this value, but it
+-- automatically scales down to make all data fit.
+-- If `scale` and `max_value` are unset, `max_value` defaults to 1.
 --
 -- @DOC_wibox_widget_graph_max_value_EXAMPLE@
---
--- If "scale" is also set, the graph never scales up below this value, but it
--- automatically scales down to make all data fit.
 --
 -- @property max_value
 -- @tparam number max_value
 -- @propemits true false
 
---- The minimum value.
+--- The minimum value the graph should handle.
+--
+-- This value corresponds to the bottom of the graph.
+-- If `scale` is also set, the graph never scales up above this value, but it
+-- automatically scales down to make all data fit.
+-- If `scale` and `min_value` are unset, `min_value` defaults to 0.
 --
 -- @DOC_wibox_widget_graph_min_value_EXAMPLE@
 --
@@ -108,7 +115,15 @@ local graph = { mt = {} }
 
 --- Set the graph to automatically scale its values. Default is false.
 --
---@DOC_wibox_widget_graph_scale1_EXAMPLE@
+-- If this property is set to true, the graph calculates
+-- effective `min_value` and `max_value` based on the displayed data,
+-- so that all data fits on screen. The properties themselves aren't changed,
+-- but the graph is drawn as though `min_value`(`max_value`) were equal to
+-- the minimum(maximum) value among itself and the currently drawn values.
+-- If `min_value`(`max_value`) is unset, then only the drawn values
+-- are considered in this calculation.
+--
+-- @DOC_wibox_widget_graph_scale1_EXAMPLE@
 --
 -- @property scale
 -- @tparam boolean scale
