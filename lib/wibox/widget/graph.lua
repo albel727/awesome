@@ -275,6 +275,16 @@ local function graph_gather_drawn_values_num_stats(self, new_value)
     end
 end
 
+--- Determine the color to paint a data group with.
+--
+-- The graph uses this method to choose a color for a given data group.
+-- The default implementation uses a color from the `group_colors` table,
+-- if present, otherwise it falls back to `color`, then
+-- `beautiful.graph_fg` and finally to color red (#ff0000).
+--
+-- @method pick_data_group_color
+-- @tparam number group_idx The index of the data group.
+-- @treturn gears.color The color to paint the data group's values with.
 function graph:pick_data_group_color(group_idx)
     -- Use an individual group color, if there's one
     local data_group_colors = self._private.group_colors
