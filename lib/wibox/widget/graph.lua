@@ -663,8 +663,20 @@ end
 
 --- Set the graph capacity.
 --
+-- Since the typical uses of the graph widget imply that `add_value` will be
+-- called an indefinite number of times, the widget needs a way to know, when
+-- to start discarding old values from the backing array.
+--
+-- When `capacity` is set, it defines the maximum number of values to keep in
+-- each data group.
+--
+-- When `capacity` is unset (default), the number is determined heuristically,
+-- which is sufficient most of the time, unless the widget gets resized
+-- too much too fast.
+--
 -- @property capacity
--- @tparam[opt=nil] number|nil capacity The maximum number of values to keep per data group (`nil` for automatic guess).
+-- @tparam[opt=nil] integer|nil capacity The maximum number of values to keep
+-- per data group (`nil` for automatic guess).
 -- @propemits true false
 function graph:set_capacity(capacity)
     -- Property override to avoid emitting the "redraw_needed" signal,
