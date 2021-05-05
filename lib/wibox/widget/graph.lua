@@ -549,6 +549,22 @@ function graph:fit(_, width, height)
     return width, height
 end
 
+--- Determine how many values should be drawn for a given widget width.
+--
+-- The graph uses this method to determine the upper bound on the
+-- number of values that will be drawn from each data group. This affects,
+-- among other things, how many values will be considered for autoscaling,
+-- when `scale` is true, and, indirectly, how many values will be kept in
+-- the backing array, when `capacity` is unset.
+--
+-- The default implementation computes the minimum number that is enough
+-- to completely cover the given width with `step_width` + `step_spacing`
+-- intervals. The graph calls this method on every redraw and the width
+-- passed is the width of the value drawing area, i.e the graph borders
+-- are subtracted (2\*`border_width`).
+--
+-- @method compute_drawn_values_num
+-- @tparam number usable_width
 function graph:compute_drawn_values_num(usable_width)
     if usable_width <= 0 then
         return 0
