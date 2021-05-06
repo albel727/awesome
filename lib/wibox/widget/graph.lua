@@ -293,7 +293,7 @@ function graph:pick_data_group_color(group_idx)
     return clr or self._private.color or beautiful.graph_fg or "#ff0000"
 end
 
-function graph:should_draw_data_group(group_idx)
+local function graph_should_draw_data_group(self, group_idx)
     -- This default implementation decides, whether a group should be drawn,
     -- based on presence of colors, for reasons of backward compatibility.
     local data_group_colors = self._private.group_colors
@@ -334,7 +334,7 @@ local function graph_preprocess_values(self, values, drawn_values_num)
         local drawn_row = {}
         drawn_values[group_idx] = drawn_row
 
-        if self:should_draw_data_group(group_idx) then
+        if graph_should_draw_data_group(self, group_idx) then
             for idx, value in ipairs(group_values) do
                 if idx > drawn_values_num then
                     break
@@ -452,7 +452,7 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     local prev_y = self._private.stack and {}
 
     for group_idx, group_values in ipairs(drawn_values) do
-        if self:should_draw_data_group(group_idx) then
+        if graph_should_draw_data_group(self, group_idx) then
             -- Set the data series' color early, in case the user
             -- wants to do their own painting inside step_shape()
             cr:set_source(color(self:pick_data_group_color(group_idx)))
