@@ -306,7 +306,7 @@ function graph:should_draw_data_group(group_idx)
     return not not data_group_colors[group_idx]
 end
 
-function graph:preprocess_values(values, drawn_values_num)
+local function graph_preprocess_values(self, values, drawn_values_num)
     -- TODO: elevate to function documentation, if we decide to make it public API.
     --- Preprocesses values before drawing them.
     -- This function can return up to 2 values: drawn_values and scaling_values
@@ -437,7 +437,7 @@ function graph:draw_values(cr, _, height, drawn_values_num)
     -- Preserve the transform centered at the top-left corner of the graph
     local pristine_transform = step_shape and cr:get_matrix()
 
-    local drawn_values, scaling_values = self:preprocess_values(values, drawn_values_num)
+    local drawn_values, scaling_values = graph_preprocess_values(self, values, drawn_values_num)
     -- If preprocessor returned drawn_values = nil, then simply draw the values we have
     drawn_values = drawn_values or values
     -- If preprocessor returned scaling_values = nil, then
