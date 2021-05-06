@@ -293,6 +293,20 @@ function graph:pick_data_group_color(group_idx)
     return clr or self._private.color or beautiful.graph_fg or "#ff0000"
 end
 
+--- Determine if a data group should be rendered.
+--
+-- The graph uses this method to decide whether the given data group
+-- should get its values rendered.
+--
+-- The default implementation says yes to all data groups, unless
+-- `group_colors` property is set, in which case only those groups are
+-- rendered, for which there are colors in the `group_colors` table,
+-- so one can e.g. disable groups by setting their colors to false.
+--
+-- @method should_draw_data_group
+-- @tparam number group_idx The index of the data group.
+-- @treturn boolean true if the group should be rendered, false otherwise.
+-- @local I'm not confident, that this is good API, so I'm making it private.
 local function graph_should_draw_data_group(self, group_idx)
     -- This default implementation decides, whether a group should be drawn,
     -- based on presence of colors, for reasons of backward compatibility.
