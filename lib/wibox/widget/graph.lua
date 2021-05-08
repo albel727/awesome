@@ -435,7 +435,7 @@ local function graph_choose_coordinate_system(self, scaling_values, drawn_values
     return min_value, max_value, baseline_y
 end
 
-function graph:draw_values(cr, _, height, drawn_values_num)
+local function graph_draw_values(self, cr, _, height, drawn_values_num)
     local values = self._private.values
 
     local step_shape = self._private.step_shape
@@ -544,7 +544,7 @@ function graph:draw(_, cr, width, height)
         local values_width = width - 2*border_width
         local values_height = height - 2*border_width
 
-        self:draw_values(cr, values_width, values_height, drawn_values_num)
+        graph_draw_values(self, cr, values_width, values_height, drawn_values_num)
 
         -- Undo the cr:translate() for the border and step shapes
         cr:restore()
