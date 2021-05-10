@@ -247,19 +247,100 @@ local properties = { "width", "height", "border_color", "stack",
                      "group_colors",
 }
 
--- Yellow-black danger stripe color for NaNs
-local default_nan_color = color.create_pattern_uncached({
-    type = "linear", from = {0, 0}, to = {4, 4},
-    stops={
-        {0, "#000000"},
-        {0.25, "#000000"}, {0.25, "#ffff00"},
-        {0.50, "#ffff00"}, {0.50, "#000000"},
-        {0.75, "#000000"}, {0.75, "#ffff00"},
-        {1, "#ffff00"},
-    },
+-- This is what the properties are set to on widget construction.
+local prop_defaults = {
+    baseline_value   = 0,
+    clamp_bars       = true,
+    nan_indication   = true,
+    step_width       = 1,
+    step_spacing     = 0,
+
+-- These aren't very useful to set, and the docs don't distinguish between
+-- "defaults to" (equals to in a fresh instance) and
+-- "falls back to" (is assumed to be equal to, when nil) anyway.
+--  scale          = false,
+--  stack          = false,
+}
+
+-- This is what the properties are assumed to be in the code, when unset/falsy.
+local prop_fallbacks = {
+-- This one might become beautiful-themed in the future, so we can't set it
+-- in the constructor.
+    border_width     = 0,
+
+-- These are better left unreplaced in code, because they're used only in one
+-- place and the intent is more clear when the numbers are directly visible.
+--  min_value        = 0,
+--  max_value        = 1,
+
+-- This one is set later. It's not in `prop_defaults`, because I don't
+-- want to make it accessible through the getter, lest the user somehow mutates
+-- the Cairo pattern and breaks NaN indication for all other graphs.
+--  nan_color        = make_fallback_nan_color()
+}
+
+-- All property defaults are also necessarily fallbacks.
+gtable.crush(prop_fallbacks, prop_defaults, true)
+
+-- These fallbacks are themed and can change on the fly.
+setmetatable(prop_fallbacks, {
+    __index = function(_, key)
+        -- TODO: maybe theme graph.nan_color too?
+        if key == "background_color" then
+            return beautiful.graph_bg or "#000000aa"
+        elseif key == "border_color" then
+            return beautiful.graph_border_color or "#ffffff"
+        elseif key == "color" then
+            return beautiful.graph_fg or "#ff0000"
+        end
+    end
 })
 
-default_nan_color:set_extend("REPEAT")
+-- This function sets up default implementations for property getters/setters,
+-- when none exist yet. It will be called at the end of this class module.
+local function build_properties(prototype, prop_names)
+    for _, prop in ipairs(prop_names) do
+        if not prototype["set_" .. prop] then
+            prototype["set_" .. prop] = function(self, value)
+                if self._private[prop] ~= value then
+                    self._private[prop] = value
+                    self:emit_signal("widget::redraw_needed")
+                    self:emit_signal("property::"..prop, value)
+                end
+                return self
+            end
+        end
+        if not prototype["get_" .. prop] then
+            prototype["get_" .. prop] = function(self)
+                return self._private[prop]
+            end
+        end
+    end
+end
+
+-- Creates a yellow-black danger stripe @{gears.color} for NaN indication.
+local function build_fallback_nan_color()
+    local clr = color.create_pattern_uncached({
+        ["type"] = "linear",
+        from = {0, 0}, to = {4, 4},
+        stops={
+            {0, "#000000"},
+            {0.25, "#000000"}, {0.25, "#ffff00"},
+            {0.50, "#ffff00"}, {0.50, "#000000"},
+            {0.75, "#000000"}, {0.75, "#ffff00"},
+            {1, "#ffff00"},
+        },
+    })
+    clr:set_extend("REPEAT")
+    return clr
+end
+
+-- Set up the nan_color fallback.
+prop_fallbacks.nan_color = build_fallback_nan_color()
+
+--
+-- Module and prototype methods.
+--
 
 local function graph_gather_drawn_values_num_stats(self, new_value)
     if not (new_value >= 0) then
@@ -290,7 +371,7 @@ function graph:pick_data_group_color(group_idx)
     local data_group_colors = self._private.group_colors
     local clr = data_group_colors and data_group_colors[group_idx]
     -- Or fall back to some other colors
-    return clr or self._private.color or beautiful.graph_fg or "#ff0000"
+    return clr or self._private.color or prop_fallbacks.color
 end
 
 --- Determine if a data group should be rendered.
@@ -426,7 +507,7 @@ local function graph_choose_coordinate_system(self, scaling_values, drawn_values
 
     -- The position of the baseline in value coordinates
     -- It defaults to the usual zero axis
-    local baseline_value = self._private.baseline_value or 0
+    local baseline_value = self._private.baseline_value or prop_fallbacks.baseline_value
     -- Let's map it into widget coordinates
     local baseline_y = graph_map_value_to_widget_coordinates(
         self, baseline_value, min_value, max_value, height
@@ -439,8 +520,8 @@ local function graph_draw_values(self, cr, _, height, drawn_values_num)
     local values = self._private.values
 
     local step_shape = self._private.step_shape
-    local step_spacing = self._private.step_spacing or 0
-    local step_width = self._private.step_width or 1
+    local step_spacing = self._private.step_spacing or prop_fallbacks.step_spacing
+    local step_width = self._private.step_width or prop_fallbacks.step_width
 
     -- Cache methods used in the inner loop for a 3x performance boost
     local cairo_rectangle = cr.rectangle
@@ -512,7 +593,7 @@ local function graph_draw_values(self, cr, _, height, drawn_values_num)
     end
 
     if nan_x and #nan_x > 0 then
-        cr:set_source(color(self._private.nan_color or default_nan_color))
+        cr:set_source(color(self._private.nan_color or prop_fallbacks.nan_color))
         for _, x in ipairs(nan_x) do
             -- Draw full-height rectangle with nan_color to indicate NaN
             cairo_rectangle(cr, x, 0, step_width, height)
@@ -522,14 +603,14 @@ local function graph_draw_values(self, cr, _, height, drawn_values_num)
 end
 
 function graph:draw(_, cr, width, height)
-    local border_width = self._private.border_width or 0
+    local border_width = self._private.border_width or prop_fallbacks.border_width
     local drawn_values_num = self:compute_drawn_values_num(width-2*border_width)
 
     -- Track our usage to help us guess the necessary values array capacity
     graph_gather_drawn_values_num_stats(self, drawn_values_num)
 
     -- Draw the background first
-    cr:set_source(color(self._private.background_color or beautiful.graph_bg or "#000000aa"))
+    cr:set_source(color(self._private.background_color or prop_fallbacks.background_color))
     cr:paint()
 
     -- Draw the values
@@ -554,7 +635,7 @@ function graph:draw(_, cr, width, height)
     if border_width > 0 then
         cr:set_line_width(border_width)
         cr:rectangle(border_width/2, border_width/2, width - border_width, height - border_width)
-        cr:set_source(color(self._private.border_color or beautiful.graph_border_color or "#ffffff"))
+        cr:set_source(color(self._private.border_color or prop_fallbacks.border_color))
         cr:stroke()
     end
 end
@@ -583,8 +664,8 @@ function graph:compute_drawn_values_num(usable_width)
     if usable_width <= 0 then
         return 0
     end
-    local step_width = self._private.step_width or 1
-    local step_spacing = self._private.step_spacing or 0
+    local step_width = self._private.step_width or prop_fallbacks.step_width
+    local step_spacing = self._private.step_spacing or prop_fallbacks.step_spacing
     return math.ceil(usable_width / (step_width + step_spacing))
 end
 
@@ -786,25 +867,6 @@ function graph:get_stack_colors()
 end
 
 
--- Build properties function
-for _, prop in ipairs(properties) do
-    if not graph["set_" .. prop] then
-        graph["set_" .. prop] = function(_graph, value)
-            if _graph._private[prop] ~= value then
-                _graph._private[prop] = value
-                _graph:emit_signal("widget::redraw_needed")
-                _graph:emit_signal("property::"..prop, value)
-            end
-            return _graph
-        end
-    end
-    if not graph["get_" .. prop] then
-        graph["get_" .. prop] = function(_graph)
-            return _graph._private[prop]
-        end
-    end
-end
-
 --- Create a graph widget.
 --
 -- @tparam table args Standard widget() arguments.
@@ -834,10 +896,9 @@ function graph.new(args)
         _graph._private.forced_height = height
     end
 
+    -- Set initial values for properties.
+    gtable.crush(_graph._private, prop_defaults, true)
     _graph._private.values    = {}
-    _graph._private.clamp_bars = true
-    _graph._private.nan_indication = true
-
     -- Copy methods and properties over
     gtable.crush(_graph, graph, true)
     -- Except those, which don't belong in the widget instance
@@ -850,6 +911,9 @@ end
 function graph.mt:__call(...)
     return graph.new(...)
 end
+
+-- Setup default impls for property accessors that haven't been implemented explicitly.
+build_properties(graph, properties)
 
 return setmetatable(graph, graph.mt)
 

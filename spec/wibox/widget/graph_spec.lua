@@ -21,8 +21,11 @@ local deprecated_properties = {
 }
 
 local property_defaults = {
+    baseline_value = 0,
     clamp_bars = true,
     nan_indication = true,
+    step_width = 1,
+    step_spacing = 0,
 }
 
 local redrawless_properties = {
